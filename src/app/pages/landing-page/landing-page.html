@@ -1,0 +1,173 @@
+<div class="min-h-screen flex flex-col bg-[#f8fafc] text-slate-800">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center gap-3 text-[var(--p-primary-color)]">
+        <i class="pi pi-th-large text-3xl"></i>
+        <span class="font-extrabold text-2xl tracking-tight text-slate-900"
+          >Nexos<span class="text-[var(--p-primary-color)]">ERP</span></span
+        >
+      </div>
+
+      <div class="flex gap-4">
+        <p-button
+          label="Iniciar Sesión"
+          [text]="true"
+          severity="secondary"
+          routerLink="/auth/login"
+        ></p-button>
+        <p-button label="Crear Cuenta" routerLink="/auth/register"></p-button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-grow flex flex-col items-center justify-center text-center px-4 py-24 bg-white">
+    <h1 class="text-5xl md:text-7xl font-extrabold text-slate-900 mb-6 max-w-5xl leading-tight">
+      Control total de tu negocio en <br />
+      <span class="text-[var(--p-primary-color)]">una sola plataforma</span>
+    </h1>
+
+    <p class="text-xl text-slate-500 mb-10 max-w-3xl leading-relaxed">
+      Automatiza tus procesos, reduce costos operativos y toma decisiones estratégicas basadas en
+      datos reales. Diseñado para escalar contigo.
+    </p>
+
+    <div class="flex flex-col sm:flex-row gap-4">
+      <p-button
+        label="Comenzar prueba gratuita"
+        icon="pi pi-arrow-right"
+        iconPos="right"
+        size="large"
+        routerLink="/auth/register"
+      ></p-button>
+      <p-button
+        label="Agendar una demo"
+        icon="pi pi-calendar"
+        severity="secondary"
+        [outlined]="true"
+        size="large"
+      ></p-button>
+    </div>
+  </main>
+
+  <section class="bg-slate-900 text-white py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        @for (stat of stats; track stat.label) {
+          <div class="flex flex-col">
+            <span class="text-4xl md:text-5xl font-extrabold text-[var(--p-primary-400)] mb-2">{{
+              stat.value
+            }}</span>
+            <span class="text-slate-400 font-medium">{{ stat.label }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 w-full bg-[#f8fafc]">
+    <div class="text-center mb-16 max-w-3xl mx-auto">
+      <h2
+        class="text-brand-600 font-semibold tracking-wider uppercase text-sm mb-3 text-[var(--p-primary-color)]"
+      >
+        Módulos Integrados
+      </h2>
+      <h3 class="text-3xl md:text-4xl font-bold text-slate-900">
+        Todo lo que necesitas, sin complicaciones
+      </h3>
+      <p class="mt-4 text-lg text-slate-500">
+        Nuestra arquitectura modular te permite habilitar solo las herramientas que tu empresa
+        requiere hoy.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      @for (feature of features; track feature.title) {
+        <p-card
+          styleClass="h-full border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 bg-white"
+        >
+          <div class="flex flex-col p-2">
+            <div
+              class="w-12 h-12 rounded-lg bg-[var(--p-primary-50)] flex items-center justify-center mb-6 text-[var(--p-primary-600)] border border-[var(--p-primary-100)]"
+            >
+              <i [class]="feature.icon" class="text-xl"></i>
+            </div>
+            <h4 class="text-xl font-bold text-slate-900 mb-3">{{ feature.title }}</h4>
+            <p class="text-slate-500 leading-relaxed">{{ feature.desc }}</p>
+          </div>
+        </p-card>
+      }
+    </div>
+  </section>
+
+  <section class="bg-[var(--p-primary-color)] py-20 text-center px-4">
+    <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">
+      ¿Listo para transformar tu empresa?
+    </h2>
+    <p class="text-white/80 text-lg mb-10 max-w-2xl mx-auto">
+      Únete a cientos de empresas que ya están optimizando sus recursos con NexosERP.
+    </p>
+    <p-button
+      label="Crear mi cuenta ahora"
+      severity="contrast"
+      size="large"
+      routerLink="/auth/register"
+    ></p-button>
+  </section>
+
+  <footer class="bg-white border-t border-slate-200 pt-16 pb-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+        <div class="col-span-1 md:col-span-2">
+          <div class="flex items-center gap-2 text-[var(--p-primary-color)] mb-4">
+            <i class="pi pi-th-large text-2xl"></i>
+            <span class="font-extrabold text-xl text-slate-900">NexosERP</span>
+          </div>
+          <p class="text-slate-500 max-w-sm">
+            Simplificando la gestión empresarial con tecnología de punta y altos estándares de
+            calidad.
+          </p>
+        </div>
+        <div>
+          <h4 class="font-bold text-slate-900 mb-4">Producto</h4>
+          <ul class="space-y-2 text-slate-500">
+            <li>
+              <a href="#" class="hover:text-[var(--p-primary-color)] transition-colors"
+                >Características</a
+              >
+            </li>
+            <li>
+              <a href="#" class="hover:text-[var(--p-primary-color)] transition-colors">Precios</a>
+            </li>
+            <li>
+              <a href="#" class="hover:text-[var(--p-primary-color)] transition-colors"
+                >Seguridad</a
+              >
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-bold text-slate-900 mb-4">Soporte</h4>
+          <ul class="space-y-2 text-slate-500">
+            <li>
+              <a href="#" class="hover:text-[var(--p-primary-color)] transition-colors"
+                >Documentación</a
+              >
+            </li>
+            <li>
+              <a href="#" class="hover:text-[var(--p-primary-color)] transition-colors">Contacto</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <p-divider></p-divider>
+      <div class="flex justify-between items-center text-sm text-slate-400 mt-6">
+        <p>&copy; 2024 NexosERP. Todos los derechos reservados.</p>
+        <div class="flex gap-4">
+          <i class="pi pi-twitter hover:text-slate-600 cursor-pointer"></i>
+          <i class="pi pi-linkedin hover:text-slate-600 cursor-pointer"></i>
+          <i class="pi pi-github hover:text-slate-600 cursor-pointer"></i>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>
