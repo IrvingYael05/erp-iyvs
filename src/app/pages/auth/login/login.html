@@ -1,4 +1,4 @@
-<div class="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
+<p-toast></p-toast> <div class="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 bg-[#f8fafc]">
   
   <a routerLink="/" class="flex items-center gap-2 mb-8 hover:opacity-80 transition-opacity cursor-pointer no-underline">
     <i class="pi pi-th-large text-4xl text-[var(--p-primary-color)]"></i>
@@ -12,15 +12,29 @@
       <p class="text-sm text-slate-500 mt-2">Ingresa tus credenciales para acceder al sistema</p>
     </div>
 
-    <div class="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 mb-8 bg-slate-50 flex flex-col items-center justify-center">
-      <i class="pi pi-shield text-3xl mb-3 text-slate-300"></i>
-      <p class="text-sm font-medium text-slate-500">Formulario en construcción</p>
-      <p class="text-xs mt-1">Espacio reservado para inputs seguros</p>
-    </div>
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-6">
+      
+      <div class="flex flex-col gap-2">
+        <label for="usuario" class="text-sm font-semibold text-slate-700">Usuario</label>
+        <input pInputText id="usuario" formControlName="usuario" placeholder="Ej. admin" class="w-full" />
+        @if (f['usuario'].invalid && (f['usuario'].dirty || f['usuario'].touched)) {
+          <small class="text-red-500">El usuario es requerido.</small>
+        }
+      </div>
 
-    <div class="flex flex-col gap-4">
-      <p-button label="Ingresar al sistema" styleClass="w-full" size="large" routerLink="/"></p-button>
-    </div>
+      <div class="flex flex-col gap-2">
+        <label for="password" class="text-sm font-semibold text-slate-700">Contraseña</label>
+        <p-password id="password" formControlName="password" [toggleMask]="true" [feedback]="false" placeholder="Ingresa tu contraseña" styleClass="w-full" [inputStyle]="{'width': '100%'}"></p-password>
+        @if (f['password'].invalid && (f['password'].dirty || f['password'].touched)) {
+          <small class="text-red-500">La contraseña es requerida.</small>
+        }
+      </div>
+
+      <div class="mt-2">
+        <p-button label="Ingresar al sistema" type="submit" [disabled]="loginForm.invalid" styleClass="w-full" size="large"></p-button>
+      </div>
+
+    </form>
 
     <p-divider align="center" styleClass="my-8">
       <span class="text-slate-400 text-sm bg-white px-2">o</span>
