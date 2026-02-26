@@ -20,8 +20,8 @@ export const routes: Routes = [
     canActivate: [guestGuard],
   },
   {
-    path: 'dashboard',
-    loadComponent: () => import('./pages/dashboard/dashboard').then((c) => c.Dashboard),
+    path: 'home',
+    loadComponent: () => import('./pages/home/home').then((c) => c.Home),
     canActivate: [authGuard],
   },
   {

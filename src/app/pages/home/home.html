@@ -1,0 +1,51 @@
+<app-main-layout pageTitle="Resumen General">
+  
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    @for (kpi of kpis; track kpi.title) {
+      <p-card styleClass="shadow-sm border border-slate-200">
+        <div class="flex items-center gap-4">
+          <div [class]="kpi.bg" class="w-14 h-14 rounded-xl flex items-center justify-center">
+            <i [class]="kpi.icon + ' ' + kpi.color" class="text-2xl"></i>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-slate-500 mb-1">{{ kpi.title }}</p>
+            <h3 class="text-2xl font-bold text-slate-800 m-0">{{ kpi.value }}</h3>
+          </div>
+        </div>
+      </p-card>
+    }
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <div class="lg:col-span-2">
+      <p-card header="Rendimiento Financiero" styleClass="h-full shadow-sm border border-slate-200">
+        <div class="min-h-[300px] flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
+          <i class="pi pi-chart-line text-5xl mb-4 text-slate-300"></i>
+          <p class="font-medium">Gráfico en construcción (Próximamente p-chart)</p>
+        </div>
+      </p-card>
+    </div>
+    
+    <div>
+      <p-card header="Actividad Reciente" styleClass="h-full shadow-sm border border-slate-200">
+        <p-timeline [value]="actividadReciente">
+          <ng-template pTemplate="marker" let-evento>
+            <span class="flex w-8 h-8 items-center justify-center text-white rounded-full z-10 shadow-sm" [style.backgroundColor]="evento.color">
+              <i [class]="evento.icon"></i>
+            </span>
+          </ng-template>
+          
+          <ng-template pTemplate="content" let-evento>
+            <div class="mb-6 ml-2">
+              <p class="font-semibold text-slate-700 m-0">{{ evento.status }}</p>
+              <small class="text-slate-400">{{ evento.date }}</small>
+            </div>
+          </ng-template>
+        </p-timeline>
+      </p-card>
+    </div>
+
+  </div>
+
+</app-main-layout>

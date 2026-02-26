@@ -52,7 +52,7 @@ export class Login {
         });
 
         setTimeout(() => {
-          this.router.navigate(['/dashboard']);
+          this.router.navigate(['/home']);
         }, 1000);
       } else {
         this.messageService.add({

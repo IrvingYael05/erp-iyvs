@@ -69,7 +69,7 @@ export class Register {
       direccion: ['', [Validators.required]],
       telefono: [
         '',
-        [Validators.required, Validators.pattern('^[0-9]+$'), Validators.minLength(10)],
+        [Validators.required, Validators.pattern('^[0-9]{10}$')],
       ],
       fechaNacimiento: [null, [Validators.required, ageValidator]],
       password: [
