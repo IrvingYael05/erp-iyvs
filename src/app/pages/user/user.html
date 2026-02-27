@@ -1,0 +1,62 @@
+<app-main-layout pageTitle="Mi Perfil">
+  <div class="max-w-4xl mx-auto">
+    <p-card styleClass="shadow-sm border border-slate-200">
+      <div class="flex flex-col md:flex-row items-center gap-6 mb-6 p-4">
+        <p-avatar
+          [label]="(userData?.usuario?.charAt(0) | uppercase) || 'U'"
+          styleClass="bg-[var(--p-primary-100)] text-[var(--p-primary-600)] text-4xl font-bold"
+          shape="circle"
+          [style]="{ width: '100px', height: '100px' }"
+        >
+        </p-avatar>
+
+        <div class="text-center md:text-left">
+          <h2 class="text-3xl font-bold text-slate-800">
+            {{ userData?.nombreCompleto || 'Usuario Desconocido' }}
+          </h2>
+          <p class="text-slate-500 text-lg">{{ userData?.email || 'Sin correo registrado' }}</p>
+          <span
+            class="inline-block mt-3 px-4 py-1 bg-[var(--p-primary-50)] text-[var(--p-primary-700)] text-sm font-bold rounded-full border border-[var(--p-primary-200)]"
+          >
+            Administrador
+          </span>
+        </div>
+      </div>
+
+      <p-divider></p-divider>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 p-4 mt-4">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-semibold text-slate-400 uppercase tracking-wider"
+            >Nombre de Usuario</span
+          >
+          <span class="text-xl text-slate-800 font-medium">{{ userData?.usuario }}</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-semibold text-slate-400 uppercase tracking-wider"
+            >Teléfono</span
+          >
+          <span class="text-xl text-slate-800 font-medium">{{
+            userData?.telefono || 'No registrado'
+          }}</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-semibold text-slate-400 uppercase tracking-wider"
+            >Dirección</span
+          >
+          <span class="text-xl text-slate-800 font-medium">{{
+            userData?.direccion || 'No registrada'
+          }}</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-semibold text-slate-400 uppercase tracking-wider"
+            >Fecha de Nacimiento</span
+          >
+          <span class="text-xl text-slate-800 font-medium">{{
+            (userData?.fechaNacimiento | date: 'longDate') || 'No registrada'
+          }}</span>
+        </div>
+      </div>
+    </p-card>
+  </div>
+</app-main-layout>

@@ -18,17 +18,8 @@ export class Sidebar {
 
   menuItems: MenuItem[] = [
     { label: 'Inicio', icon: 'pi pi-home', routerLink: '/home' },
-    { 
-      label: 'Inventario', 
-      icon: 'pi pi-box',
-      items: [
-        { label: 'Productos', icon: 'pi pi-list', routerLink: '/home' },
-        { label: 'Categorías', icon: 'pi pi-tags', routerLink: '/home' }
-      ]
-    },
-    { label: 'Ventas', icon: 'pi pi-shopping-cart', routerLink: '/home' },
-    { label: 'Empleados', icon: 'pi pi-users', routerLink: '/home' },
-    { label: 'Reportes', icon: 'pi pi-chart-bar', routerLink: '/home' },
+    { label: 'Grupo', icon: 'pi pi-users', routerLink: '/group' },
+    { label: 'Usuario', icon: 'pi pi-user', routerLink: '/user' }
   ];
 
   logout() {
