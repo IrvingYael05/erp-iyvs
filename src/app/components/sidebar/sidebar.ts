@@ -19,7 +19,7 @@ export class Sidebar {
   menuItems: MenuItem[] = [
     { label: 'Inicio', icon: 'pi pi-home', routerLink: '/home' },
     { label: 'Grupo', icon: 'pi pi-users', routerLink: '/group' },
-    { label: 'Usuario', icon: 'pi pi-user', routerLink: '/user' }
+    { label: 'Perfil', icon: 'pi pi-user', routerLink: '/user' }
   ];
 
   logout() {
