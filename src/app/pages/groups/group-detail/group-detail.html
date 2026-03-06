@@ -1,0 +1,409 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<app-main-layout [pageTitle]="'Gestión: ' + (grupo?.nombre || 'Grupo')">
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <h2 class="text-2xl font-bold text-slate-800 m-0">{{ grupo?.nombre }}</h2>
+        </div>
+        <p class="text-slate-500 m-0">Nivel {{ grupo?.nivel }}</p>
+        <p class="text-slate-500 m-0">{{ grupo?.descripcion }}</p>
+      </div>
+
+      <p-button
+        label="Volver a Grupos"
+        icon="pi pi-arrow-left"
+        severity="secondary"
+        [text]="true"
+        (onClick)="volverDirectorio()"
+      ></p-button>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+    <p-tabs value="0">
+      <p-tablist>
+        <p-tab value="0">Integrantes</p-tab>
+        <p-tab value="1">Tickets y Tareas</p-tab>
+      </p-tablist>
+      <p-tabpanels>
+        <p-tabpanel header="Integrantes" leftIcon="pi pi-users" value="0">
+          <form
+            [formGroup]="integranteForm"
+            (ngSubmit)="agregarIntegrante()"
+            class="flex flex-col sm:flex-row gap-3 mb-6 mt-2"
+          >
+            <div class="flex-1 max-w-md" *appHasPermission="'group-detail:add'">
+              <input
+                pInputText
+                type="email"
+                formControlName="email"
+                placeholder="Correo electrónico del usuario..."
+                class="w-full"
+              />
+              <div
+                *ngIf="integranteForm.get('email')?.invalid && integranteForm.get('email')?.touched"
+                class="text-red-500 text-sm mt-1"
+              >
+                Por favor, ingresa un correo electrónico válido.
+              </div>
+            </div>
+            <p-button
+              *appHasPermission="'group-detail:add'"
+              label="Añadir al grupo"
+              icon="pi pi-plus"
+              type="submit"
+              [disabled]="integranteForm.invalid"
+            ></p-button>
+          </form>
+
+          <p-table
+            [value]="grupo?.integrantesList || []"
+            [rowHover]="true"
+            styleClass="p-datatable-sm border-t border-slate-100"
+          >
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Correo Electrónico</th>
+                <th *appHasPermission="'group-detail:delete'" class="text-right w-32">Acciones</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-email>
+              <tr>
+                <td class="font-medium text-slate-700">
+                  <i class="pi pi-user mr-2 text-slate-400"></i>
+                  {{ email }}
+                </td>
+                <td *appHasPermission="'group-detail:delete'" class="text-right">
+                  <p-button
+                    *appHasPermission="'group-detail:delete'"
+                    icon="pi pi-trash"
+                    [rounded]="true"
+                    [text]="true"
+                    severity="danger"
+                    pTooltip="Eliminar integrante"
+                    (onClick)="eliminarIntegrante(email)"
+                  ></p-button>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="2" class="text-center p-4 text-slate-500">
+                  Aún no hay integrantes en este grupo.
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </p-tabpanel>
+
+        <p-tabpanel header="Tickets y Tareas" leftIcon="pi pi-ticket" value="1">
+          <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 mt-2">
+            <p-button
+              *appHasPermission="'ticket:add'"
+              label="Nuevo Ticket"
+              icon="pi pi-plus"
+              (onClick)="abrirNuevoTicket()"
+            ></p-button>
+
+            <div class="flex gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
+              <button
+                (click)="cambiarVista('tabla')"
+                [ngClass]="{
+                  'bg-white shadow-sm text-[var(--p-primary-600)]': vistaTickets === 'tabla',
+                  'text-slate-500': vistaTickets !== 'tabla',
+                }"
+                class="px-4 py-2 rounded-md font-semibold text-sm transition-all cursor-pointer border-none outline-none flex items-center gap-2"
+              >
+                <i class="pi pi-table"></i> Tabla
+              </button>
+              <button
+                (click)="cambiarVista('kanban')"
+                [ngClass]="{
+                  'bg-white shadow-sm text-[var(--p-primary-600)]': vistaTickets === 'kanban',
+                  'text-slate-500': vistaTickets !== 'kanban',
+                }"
+                class="px-4 py-2 rounded-md font-semibold text-sm transition-all cursor-pointer border-none outline-none flex items-center gap-2"
+              >
+                <i class="pi pi-objects-column"></i> Kanban
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="vistaTickets === 'tabla'">
+            <p-table
+              #dtTickets
+              [value]="grupo?.ticketsList || []"
+              [paginator]="true"
+              [rows]="5"
+              [globalFilterFields]="['titulo', 'asignadoA']"
+              [rowHover]="true"
+              styleClass="p-datatable-sm"
+            >
+              <ng-template pTemplate="header">
+                <tr>
+                  <th pSortableColumn="titulo">Título <p-sortIcon field="titulo"></p-sortIcon></th>
+                  <th pSortableColumn="estado">Estado <p-sortIcon field="estado"></p-sortIcon></th>
+                  <th pSortableColumn="prioridad">
+                    Prioridad <p-sortIcon field="prioridad"></p-sortIcon>
+                  </th>
+                  <th pSortableColumn="asignadoA">
+                    Asignado a <p-sortIcon field="asignadoA"></p-sortIcon>
+                  </th>
+                  <th pSortableColumn="fechaLimite">
+                    Vencimiento <p-sortIcon field="fechaLimite"></p-sortIcon>
+                  </th>
+                  <th *appHasPermission="['ticket:edit', 'ticket:delete']" class="text-center">
+                    Acciones
+                  </th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-ticket>
+                <tr>
+                  <td class="font-bold text-slate-800">{{ ticket.titulo }}</td>
+                  <td>
+                    <p-tag
+                      [value]="ticket.estado"
+                      [severity]="getSeverityPorEstado(ticket.estado)"
+                    ></p-tag>
+                  </td>
+                  <td>
+                    <p-tag
+                      [value]="ticket.prioridad"
+                      [severity]="getSeverityPorPrioridad(ticket.prioridad)"
+                    ></p-tag>
+                  </td>
+                  <td class="text-sm text-slate-600">{{ ticket.asignadoA }}</td>
+                  <td class="text-sm">{{ ticket.fechaLimite | date: 'shortDate' }}</td>
+                  <td *appHasPermission="['ticket:edit', 'ticket:delete']" class="text-center">
+                    <p-button
+                      *appHasPermission="'ticket:edit'"
+                      icon="pi pi-pencil"
+                      [rounded]="true"
+                      [text]="true"
+                      severity="info"
+                      (onClick)="editarTicket(ticket)"
+                    ></p-button>
+                    <p-button
+                      *appHasPermission="'ticket:delete'"
+                      icon="pi pi-trash"
+                      [rounded]="true"
+                      [text]="true"
+                      severity="danger"
+                      (onClick)="eliminarTicket(ticket)"
+                    ></p-button>
+                  </td>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="emptymessage">
+                <tr>
+                  <td colspan="6" class="text-center p-4 text-slate-500">
+                    No hay tickets registrados en este grupo.
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
+
+          <div
+            *ngIf="vistaTickets === 'kanban'"
+            class="flex overflow-x-auto gap-6 pb-4 kanban-container min-h-[500px]"
+          >
+            <div
+              *ngFor="let estado of estados"
+              pDroppable="tickets"
+              (onDrop)="drop(estado)"
+              class="flex-none w-80 bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col h-full transition-colors"
+            >
+              <h3 class="font-bold text-slate-700 mb-4 flex items-center justify-between">
+                {{ estado }}
+                <span
+                  class="bg-white text-slate-500 text-xs px-2 py-1 rounded-full border border-slate-200 shadow-sm"
+                  >{{ getTicketsPorEstado(estado).length }}</span
+                >
+              </h3>
+
+              <div class="flex flex-col gap-3 flex-1">
+                <div
+                  *ngFor="let ticket of getTicketsPorEstado(estado)"
+                  pDraggable="tickets"
+                  (onDragStart)="dragStart(ticket)"
+                  (onDragEnd)="dragEnd()"
+                  (click)="editarTicket(ticket)"
+                  class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
+                >
+                  <div class="flex justify-between items-start mb-2">
+                    <p-tag
+                      [value]="ticket.prioridad"
+                      [severity]="getSeverityPorPrioridad(ticket.prioridad)"
+                      styleClass="text-xs"
+                    ></p-tag>
+                    <i class="pi pi-ellipsis-v text-slate-400"></i>
+                  </div>
+                  <h4 class="font-bold text-slate-800 m-0 mb-1 leading-tight">
+                    {{ ticket.titulo }}
+                  </h4>
+                  <p class="text-xs text-slate-500 mb-3 line-clamp-2">{{ ticket.descripcion }}</p>
+                  <div
+                    class="flex justify-between items-center text-xs text-slate-500 border-t border-slate-100 pt-2"
+                  >
+                    <span class="flex items-center gap-1" title="Asignado a"
+                      ><i class="pi pi-user"></i> {{ ticket.asignadoA | slice: 0 : 15 }}...</span
+                    >
+                    <span class="flex items-center gap-1 text-red-500"
+                      ><i class="pi pi-calendar"></i> {{ ticket.fechaLimite | date: 'dd/MM' }}</span
+                    >
+                  </div>
+                </div>
+
+                <div
+                  *ngIf="getTicketsPorEstado(estado).length === 0"
+                  class="flex-1 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-sm p-4 text-center min-h-[100px]"
+                >
+                  Soltar tickets aquí
+                </div>
+              </div>
+            </div>
+          </div>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </div>
+
+  <p-dialog
+    [(visible)]="ticketDialog"
+    [style]="{ width: '650px' }"
+    [header]="isEditTicketMode ? 'Editar Ticket' : 'Nuevo Ticket'"
+    [modal]="true"
+    styleClass="p-fluid"
+    [maximizable]="true"
+  >
+    <ng-template pTemplate="content">
+      <form [formGroup]="ticketForm" class="flex flex-col gap-5 p-2">
+        <div class="flex flex-col gap-2">
+          <label class="font-semibold text-slate-700">Título del Ticket *</label>
+          <input
+            type="text"
+            pInputText
+            formControlName="titulo"
+            placeholder="Breve descripción de la tarea"
+          />
+          <small class="text-red-500" *ngIf="tf['titulo'].invalid && tf['titulo'].touched"
+            >El título es requerido.</small
+          >
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="flex flex-col gap-2">
+            <label class="font-semibold text-slate-700">Asignado a *</label>
+            <p-autoComplete
+              [suggestions]="filteredIntegrantes"
+              (completeMethod)="buscarIntegrante($event)"
+              [dropdown]="true"
+              formControlName="asignadoA"
+              placeholder="Selecciona un integrante"
+              appendTo="body"
+            ></p-autoComplete>
+            <small class="text-red-500" *ngIf="tf['asignadoA'].invalid && tf['asignadoA'].touched"
+              >El integrante es requerido.</small
+            >
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-semibold text-slate-700">Estado Actual *</label>
+            <p-autoComplete
+              [suggestions]="filteredEstados"
+              (completeMethod)="buscarEstado($event)"
+              [dropdown]="true"
+              formControlName="estado"
+              placeholder="Selecciona el estado"
+              appendTo="body"
+            ></p-autoComplete>
+            <small class="text-red-500" *ngIf="tf['estado'].invalid && tf['estado'].touched"
+              >El estado es requerido.</small
+            >
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-semibold text-slate-700">Prioridad *</label>
+            <p-autoComplete
+              [suggestions]="filteredPrioridades"
+              (completeMethod)="buscarPrioridad($event)"
+              [dropdown]="true"
+              formControlName="prioridad"
+              placeholder="Nivel de prioridad"
+              appendTo="body"
+            ></p-autoComplete>
+            <small class="text-red-500" *ngIf="tf['prioridad'].invalid && tf['prioridad'].touched"
+              >La prioridad es requerida.</small
+            >
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-semibold text-slate-700">Fecha Límite *</label>
+            <p-datepicker
+              formControlName="fechaLimite"
+              [showIcon]="true"
+              [minDate]="minDate"
+              appendTo="body"
+              dateFormat="dd/mm/yy"
+            ></p-datepicker>
+            <small
+              class="text-red-500"
+              *ngIf="tf['fechaLimite'].invalid && tf['fechaLimite'].touched"
+              >La fecha límite es requerida.</small
+            >
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="font-semibold text-slate-700">Descripción completa *</label>
+          <textarea
+            pInputTextarea
+            formControlName="descripcion"
+            rows="4"
+            class="resize-none"
+          ></textarea>
+          <small class="text-red-500" *ngIf="tf['descripcion'].invalid && tf['descripcion'].touched"
+            >La descripción es requerida.</small
+          >
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="font-semibold text-slate-700">Comentarios (Opcional)</label>
+          <textarea
+            pInputTextarea
+            formControlName="comentarios"
+            rows="2"
+            class="resize-none"
+            placeholder="Notas, dudas o actualizaciones..."
+          ></textarea>
+        </div>
+
+        <div
+          *ngIf="isEditTicketMode && ticketForm.value.historial?.length > 0"
+          class="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2"
+        >
+          <label class="font-semibold text-slate-700 text-sm flex items-center gap-2 mb-2"
+            ><i class="pi pi-history"></i> Historial de Cambios</label
+          >
+          <ul class="text-xs text-slate-500 pl-4 m-0 space-y-1">
+            <li *ngFor="let log of ticketForm.value.historial">{{ log }}</li>
+          </ul>
+        </div>
+      </form>
+    </ng-template>
+
+    <ng-template pTemplate="footer">
+      <p-button
+        label="Cancelar"
+        icon="pi pi-times"
+        severity="secondary"
+        (onClick)="ticketDialog = false"
+      ></p-button>
+      <p-button label="Guardar Ticket" icon="pi pi-check" (onClick)="guardarTicket()"></p-button>
+    </ng-template>
+  </p-dialog>
+</app-main-layout>

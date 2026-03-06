@@ -1,5 +1,4 @@
-<app-main-layout pageTitle="Resumen General">
-  
+<app-main-layout pageTitle="Dashboard Principal">
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     @for (kpi of kpis; track kpi.title) {
       <p-card styleClass="shadow-sm border border-slate-200">
@@ -16,36 +15,102 @@
     }
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    
-    <div class="lg:col-span-2">
-      <p-card header="Rendimiento Financiero" styleClass="h-full shadow-sm border border-slate-200">
-        <div class="min-h-[300px] flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
-          <i class="pi pi-chart-line text-5xl mb-4 text-slate-300"></i>
-          <p class="font-medium">Gráfico en construcción (Próximamente p-chart)</p>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <div class="lg:col-span-1">
+      <p-card
+        header="Distribución de Tickets"
+        styleClass="h-full shadow-sm border border-slate-200"
+      >
+        <div class="flex justify-center items-center h-[300px]">
+          @if (kpis[0].value > 0) {
+            <p-chart
+              type="pie"
+              [data]="chartData"
+              [options]="chartOptions"
+              height="250px"
+            ></p-chart>
+          } @else {
+            <div class="text-center text-slate-400">
+              <i class="pi pi-inbox text-5xl mb-3"></i>
+              <p>No hay tickets registrados<br />en el sistema.</p>
+            </div>
+          }
         </div>
       </p-card>
     </div>
-    
-    <div>
-      <p-card header="Actividad Reciente" styleClass="h-full shadow-sm border border-slate-200">
-        <p-timeline [value]="actividadReciente">
-          <ng-template pTemplate="marker" let-evento>
-            <span class="flex w-8 h-8 items-center justify-center text-white rounded-full z-10 shadow-sm" [style.backgroundColor]="evento.color">
-              <i [class]="evento.icon"></i>
-            </span>
-          </ng-template>
-          
-          <ng-template pTemplate="content" let-evento>
-            <div class="mb-6 ml-2">
-              <p class="font-semibold text-slate-700 m-0">{{ evento.status }}</p>
-              <small class="text-slate-400">{{ evento.date }}</small>
+
+    <div class="lg:col-span-2">
+      <p-card
+        header="Accesos Rápidos a Grupos"
+        styleClass="h-full shadow-sm border border-slate-200"
+      >
+        <div
+          class="grid grid-cols-1 sm:grid-cols-2 gap-4 h-[300px] overflow-y-auto pr-2 custom-scrollbar"
+        >
+          @for (grupo of grupos; track grupo.id) {
+            <div
+              class="p-4 border border-slate-200 rounded-xl hover:shadow-md transition-shadow bg-slate-50 flex flex-col justify-between"
+              [style.cursor]="hasPermission('group-detail:view') ? 'pointer' : 'not-allowed'"
+              (click)="hasPermission('group-detail:view') ? goToGroup(grupo.id) : null"
+            >
+              <div>
+                <div class="flex justify-between items-start mb-2">
+                  <h4 class="font-bold text-slate-800 text-lg m-0 truncate" [title]="grupo.nombre">
+                    {{ grupo.nombre }}
+                  </h4>
+                  <span
+                    class="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-[var(--p-primary-100)] text-[var(--p-primary-700)]"
+                  >
+                    {{ grupo.nivel }}
+                  </span>
+                </div>
+                <p class="text-sm text-slate-500 line-clamp-2 mb-4 h-10">{{ grupo.descripcion }}</p>
+              </div>
+
+              <div class="flex items-center justify-between border-t border-slate-200 pt-3 mt-auto">
+                <div class="flex items-center gap-4 text-sm font-medium text-slate-600">
+                  <span title="Integrantes" class="flex items-center gap-1"
+                    ><i class="pi pi-users text-slate-400"></i>
+                    {{ grupo.integrantesList?.length || 0 }}</span
+                  >
+                  <span title="Tickets" class="flex items-center gap-1"
+                    ><i class="pi pi-ticket text-slate-400"></i>
+                    {{ grupo.ticketsList?.length || 0 }}</span
+                  >
+                </div>
+                <p-button
+                  icon="pi pi-arrow-right"
+                  [rounded]="true"
+                  [text]="true"
+                  severity="secondary"
+                ></p-button>
+              </div>
             </div>
-          </ng-template>
-        </p-timeline>
+          }
+
+          @if (grupos.length === 0) {
+            <div
+              class="col-span-full flex flex-col items-center justify-center text-center py-8 text-slate-400 h-full"
+            >
+              <i class="pi pi-users text-5xl mb-3"></i>
+              <p>Aún no has creado ningún grupo en el sistema.</p>
+            </div>
+          }
+        </div>
       </p-card>
     </div>
-
   </div>
-
 </app-main-layout>
+
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 20px;
+  }
+</style>

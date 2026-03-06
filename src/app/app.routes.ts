@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { LandingPage } from './pages/landing-page/landing-page';
-import { authGuard, guestGuard } from './core/guards/auth-guard';
+import { authGuard, guestGuard, permissionGuard } from './core/guards/auth-guard';
 
 export const routes: Routes = [
   {
@@ -26,13 +26,22 @@ export const routes: Routes = [
   },
   {
     path: 'group',
-    loadComponent: () => import('./pages/group/group').then((c) => c.Group),
-    canActivate: [authGuard],
+    loadComponent: () => import('./pages/groups/group/group').then((c) => c.Group),
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'group:view' },
+  },
+  {
+    path: 'group/:id',
+    loadComponent: () =>
+      import('./pages/groups/group-detail/group-detail').then((c) => c.GroupDetail),
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'group-detail:view' },
   },
   {
     path: 'user',
     loadComponent: () => import('./pages/user/user').then((c) => c.User),
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'user:view' },
   },
   {
     path: '**',

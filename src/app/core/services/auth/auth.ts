@@ -37,6 +37,14 @@ export class AuthService {
             'user:view',
             'user:edit',
             'user:delete',
+            'group-detail:view',
+            'group-detail:add',
+            'group-detail:edit',
+            'group-detail:delete',
+            'ticket:view',
+            'ticket:add',
+            'ticket:edit',
+            'ticket:delete',
           ],
         },
       ];
@@ -64,7 +72,7 @@ export class AuthService {
   }
 
   registerUser(userData: any) {
-    userData.permissions = ['group:view', 'user:view', 'user:edit'];
+    userData.permissions = ['group:view', 'user:view', 'user:edit', 'user:delete', 'ticket:view'];
     this.users.push(userData);
     this.saveUsers();
   }
@@ -112,5 +120,9 @@ export class AuthService {
     if (this.currentUser && this.currentUser.usuario === usuario) {
       this.logout();
     }
+  }
+
+  userExists(email: string): boolean {
+    return this.users.some((u: any) => u.email.toLowerCase() === email.toLowerCase());
   }
 }
