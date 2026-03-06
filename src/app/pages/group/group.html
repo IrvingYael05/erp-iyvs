@@ -15,7 +15,7 @@
     >
       <ng-template pTemplate="caption">
         <div class="flex items-center justify-between mb-4">
-          <p-button label="Nuevo Grupo" icon="pi pi-plus" (onClick)="openNew()"></p-button>
+          <p-button *appHasPermission="'group:add'" label="Nuevo Grupo" icon="pi pi-plus" (onClick)="openNew()"></p-button>
 
           <div class="flex items-center gap-2">
             <i class="pi pi-search text-slate-400"></i>
@@ -36,7 +36,7 @@
           <th pSortableColumn="autor">Autor <p-sortIcon field="autor"></p-sortIcon></th>
           <th>Integrantes</th>
           <th>Tickets</th>
-          <th class="text-center">Acciones</th>
+          <th *appHasPermission="['group:edit', 'group:delete']" class="text-center">Acciones</th>
         </tr>
       </ng-template>
 
@@ -63,8 +63,9 @@
               <span>{{ grupo.tickets }}</span>
             </div>
           </td>
-          <td class="text-center">
+          <td *appHasPermission="['group:edit', 'group:delete']" class="text-center">
             <p-button
+              *appHasPermission="'group:edit'"
               icon="pi pi-pencil"
               [rounded]="true"
               [text]="true"
@@ -72,6 +73,7 @@
               (onClick)="editGrupo(grupo)"
             ></p-button>
             <p-button
+             *appHasPermission="'group:delete'"
               icon="pi pi-trash"
               [rounded]="true"
               [text]="true"

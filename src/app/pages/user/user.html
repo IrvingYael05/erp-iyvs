@@ -69,6 +69,7 @@
 
         <div class="flex justify-end mt-8 gap-4">
           <p-button
+            *appHasPermission="'user:delete'"
             label="Desactivar Cuenta"
             icon="pi pi-user-minus"
             severity="danger"
@@ -76,6 +77,7 @@
           ></p-button>
 
           <p-button
+            *appHasPermission="'user:edit'"
             label="Guardar Cambios"
             icon="pi pi-save"
             type="submit"

@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MainLayout } from '../../layout/main-layout/main-layout';
-import { AuthService } from '../../core/services/auth';
+import { AuthService } from '../../core/services/auth/auth';
 import { CardModule } from 'primeng/card';
 import { AvatarModule } from 'primeng/avatar';
 import { DividerModule } from 'primeng/divider';
@@ -20,6 +20,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { Router } from '@angular/router';
+import { HasPermission } from '../../core/directives/permission/has-permission';
 
 function ageValidator(control: AbstractControl): ValidationErrors | null {
   if (!control.value) return null;
@@ -48,6 +49,7 @@ function ageValidator(control: AbstractControl): ValidationErrors | null {
     ButtonModule,
     ToastModule,
     ConfirmDialogModule,
+    HasPermission,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './user.html',

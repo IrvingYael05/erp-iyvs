@@ -13,6 +13,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToolbarModule } from 'primeng/toolbar';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { HasPermission } from '../../core/directives/permission/has-permission';
 
 @Component({
   selector: 'app-group',
@@ -31,6 +32,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     ToastModule,
     ConfirmDialogModule,
     ToolbarModule,
+    HasPermission,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './group.html',
@@ -41,16 +43,13 @@ export class Group implements OnInit {
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
 
-  // Simulación de base de datos
   grupos: any[] = [];
 
-  // Control del modal
   grupoDialog: boolean = false;
   isEditMode: boolean = false;
 
-  // Formulario Reactivo
   grupoForm: FormGroup = this.fb.group({
-    id: [null], // ID oculto para saber si editamos
+    id: [null],
     nivel: ['', Validators.required],
     autor: ['', Validators.required],
     nombre: ['', Validators.required],
