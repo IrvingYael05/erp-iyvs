@@ -1,5 +1,8 @@
 <app-main-layout pageTitle="Dashboard Principal">
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  <div
+    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+    *appHasPermission="'ticket:view'"
+  >
     @for (kpi of kpis; track kpi.title) {
       <p-card styleClass="shadow-sm border border-slate-200">
         <div class="flex items-center gap-4">
@@ -16,7 +19,7 @@
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-    <div class="lg:col-span-1">
+    <div class="lg:col-span-1" *appHasPermission="'ticket:view'">
       <p-card
         header="Distribución de Tickets"
         styleClass="h-full shadow-sm border border-slate-200"
@@ -39,7 +42,7 @@
       </p-card>
     </div>
 
-    <div class="lg:col-span-2">
+    <div [class]="hasPermission('ticket:view') ? 'lg:col-span-2' : 'lg:col-span-3'">
       <p-card
         header="Accesos Rápidos a Grupos"
         styleClass="h-full shadow-sm border border-slate-200"
@@ -93,7 +96,7 @@
               class="col-span-full flex flex-col items-center justify-center text-center py-8 text-slate-400 h-full"
             >
               <i class="pi pi-users text-5xl mb-3"></i>
-              <p>Aún no has creado ningún grupo en el sistema.</p>
+              <p>Aún no perteneces a ningún grupo en el sistema.</p>
             </div>
           }
         </div>

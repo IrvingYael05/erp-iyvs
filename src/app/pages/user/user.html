@@ -2,8 +2,108 @@
 <p-confirmDialog></p-confirmDialog>
 
 <app-main-layout pageTitle="Configuración de Perfil">
-  <div class="max-w-4xl mx-auto">
-    <p-card styleClass="shadow-sm border border-slate-200">
+  <div class="max-w-5xl mx-auto space-y-6">
+    <ng-container *appHasPermission="'ticket:view'">
+      <p-card styleClass="shadow-sm border border-slate-200" header="Mi Carga de Trabajo">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div
+            class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center"
+          >
+            <span class="text-3xl font-bold text-slate-700">{{ misEstadisticas.abiertos }}</span>
+            <span class="text-sm text-slate-500 font-medium">Pendientes</span>
+          </div>
+          <div
+            class="bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col items-center justify-center text-center"
+          >
+            <span class="text-3xl font-bold text-blue-700">{{ misEstadisticas.enProgreso }}</span>
+            <span class="text-sm text-blue-500 font-medium">En Progreso</span>
+          </div>
+          <div
+            class="bg-orange-50 p-4 rounded-xl border border-orange-100 flex flex-col items-center justify-center text-center"
+          >
+            <span class="text-3xl font-bold text-orange-700">{{ misEstadisticas.revision }}</span>
+            <span class="text-sm text-orange-500 font-medium">En Revisión</span>
+          </div>
+          <div
+            class="bg-green-50 p-4 rounded-xl border border-green-100 flex flex-col items-center justify-center text-center"
+          >
+            <span class="text-3xl font-bold text-green-700">{{ misEstadisticas.hechos }}</span>
+            <span class="text-sm text-green-500 font-medium">Hechos</span>
+          </div>
+        </div>
+
+        <p-table
+          [value]="misTickets"
+          [paginator]="true"
+          [rows]="5"
+          [rowHover]="true"
+          styleClass="p-datatable-sm"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th pSortableColumn="titulo">Tarea <p-sortIcon field="titulo"></p-sortIcon></th>
+              <th pSortableColumn="grupoNombre">
+                Grupo <p-sortIcon field="grupoNombre"></p-sortIcon>
+              </th>
+              <th pSortableColumn="estado">Estado <p-sortIcon field="estado"></p-sortIcon></th>
+              <th pSortableColumn="prioridad">
+                Prioridad <p-sortIcon field="prioridad"></p-sortIcon>
+              </th>
+              <th pSortableColumn="fechaLimite">
+                Vencimiento <p-sortIcon field="fechaLimite"></p-sortIcon>
+              </th>
+              <th class="text-center" *appHasPermission="'group-detail:view'">Acción</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-ticket>
+            <tr>
+              <td class="font-bold text-slate-800">{{ ticket.titulo }}</td>
+              <td class="text-sm text-slate-600">
+                <i class="pi pi-users mr-1"></i> {{ ticket.grupoNombre }}
+              </td>
+              <td>
+                <p-tag
+                  [value]="ticket.estado"
+                  [severity]="getSeverityPorEstado(ticket.estado)"
+                ></p-tag>
+              </td>
+              <td>
+                <p-tag
+                  [value]="ticket.prioridad"
+                  [severity]="getSeverityPorPrioridad(ticket.prioridad)"
+                ></p-tag>
+              </td>
+              <td
+                class="text-sm"
+                [ngClass]="{ 'text-red-500 font-bold': ticket.fechaLimite < minDate }"
+              >
+                {{ ticket.fechaLimite | date: 'shortDate' }}
+              </td>
+              <td *appHasPermission="'group-detail:view'" class="text-center">
+                <p-button
+                  *appHasPermission="'group-detail:view'"
+                  icon="pi pi-arrow-right"
+                  pTooltip="Ir al Grupo"
+                  [rounded]="true"
+                  [text]="true"
+                  severity="info"
+                  (onClick)="irAlGrupo(ticket.grupoId)"
+                ></p-button>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="6" class="text-center p-8 text-slate-500">
+                ¡Genial! No tienes ningún ticket asignado actualmente.
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </p-card>
+    </ng-container>
+
+    <p-card styleClass="shadow-sm border border-slate-200" header="Configuración de Cuenta">
       <div
         class="flex flex-col md:flex-row items-center gap-6 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100"
       >
@@ -16,14 +116,14 @@
         </p-avatar>
 
         <div class="text-center md:text-left flex-1">
-          <h2 class="text-2xl font-bold text-slate-800">
+          <h2 class="text-2xl font-bold text-slate-800 m-0 mb-1">
             {{ userData?.nombreCompleto || 'Usuario' }}
           </h2>
-          <p class="text-slate-500">{{ userData?.email }}</p>
+          <p class="text-slate-500 m-0">{{ userData?.email }}</p>
         </div>
       </div>
 
-      <form [formGroup]="profileForm" (ngSubmit)="onUpdateProfile()" class="p-4">
+      <form [formGroup]="profileForm" (ngSubmit)="onUpdateProfile()" class="p-4 pt-0">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="flex flex-col gap-2">
             <label class="text-sm font-semibold text-slate-700">Nombre de Usuario</label>
@@ -75,7 +175,6 @@
             severity="danger"
             (onClick)="deactivateAccount()"
           ></p-button>
-
           <p-button
             *appHasPermission="'user:edit'"
             label="Guardar Cambios"

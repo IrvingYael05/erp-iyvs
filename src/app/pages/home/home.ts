@@ -6,8 +6,9 @@ import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { ChartModule } from 'primeng/chart';
 import { GroupService } from '../../core/services/group/group';
-import { HasPermission } from '../../core/directives/permission/has-permission';
 import { Permission } from '../../core/services/permission/permission';
+import { AuthService } from '../../core/services/auth/auth';
+import { HasPermission } from '../../core/directives/permission/has-permission';
 
 @Component({
   selector: 'app-home',
@@ -20,6 +21,7 @@ export class Home implements OnInit {
   private groupService = inject(GroupService);
   private router = inject(Router);
   private permissionService = inject(Permission);
+  private authService = inject(AuthService);
 
   kpis: any[] = [];
   grupos: any[] = [];
@@ -32,16 +34,18 @@ export class Home implements OnInit {
   }
 
   cargarDashboard() {
-    const stats = this.groupService.getTicketStats();
-    this.grupos = this.groupService.getGroups();
+    const currentUserEmail = this.authService.getCurrentUser()?.email;
+
+    const stats = this.groupService.getTicketStats(currentUserEmail);
+    this.grupos = this.groupService.getUserGroups(currentUserEmail!);
 
     this.kpis = [
       {
         title: 'Total de Tickets',
         value: stats.total,
         icon: 'pi pi-ticket',
-        color: 'text-blue-600',
-        bg: 'bg-blue-100',
+        color: 'text-purple-600',
+        bg: 'bg-purple-100',
       },
       {
         title: 'Pendientes',
@@ -54,15 +58,15 @@ export class Home implements OnInit {
         title: 'En Progreso',
         value: stats.enProgreso,
         icon: 'pi pi-cog',
-        color: 'text-orange-600',
-        bg: 'bg-orange-100',
+        color: 'text-blue-600',
+        bg: 'bg-blue-100',
       },
       {
         title: 'En Revisión',
         value: stats.enRevision,
         icon: 'pi pi-eye',
-        color: 'text-purple-600',
-        bg: 'bg-purple-100',
+        color: 'text-orange-600',
+        bg: 'bg-orange-100',
       },
     ];
 
@@ -80,14 +84,14 @@ export class Home implements OnInit {
           data: [stats.pendientes, stats.enProgreso, stats.enRevision, stats.finalizados],
           backgroundColor: [
             documentStyle.getPropertyValue('--p-slate-500'),
+            documentStyle.getPropertyValue('--p-blue-500'),
             documentStyle.getPropertyValue('--p-orange-500'),
-            documentStyle.getPropertyValue('--p-purple-500'),
             documentStyle.getPropertyValue('--p-green-500'),
           ],
           hoverBackgroundColor: [
             documentStyle.getPropertyValue('--p-slate-400'),
+            documentStyle.getPropertyValue('--p-blue-400'),
             documentStyle.getPropertyValue('--p-orange-400'),
-            documentStyle.getPropertyValue('--p-purple-400'),
             documentStyle.getPropertyValue('--p-green-400'),
           ],
         },

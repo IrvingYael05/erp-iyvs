@@ -1,25 +1,28 @@
 <div class="flex h-screen bg-[#f8fafc] overflow-hidden">
-  
   <app-sidebar></app-sidebar>
 
   <div class="flex-1 flex flex-col overflow-hidden">
-    
-    <p-toolbar styleClass="bg-white border-none border-b border-slate-200 h-20 px-8 rounded-none w-full">
+    <p-toolbar
+      styleClass="bg-white border-none border-b border-slate-200 h-20 px-8 rounded-none w-full"
+    >
       <ng-template pTemplate="start">
         <h1 class="text-2xl font-bold text-slate-800 m-0">{{ pageTitle }}</h1>
       </ng-template>
-      
+
       <ng-template pTemplate="end">
         <div class="flex items-center gap-3">
-          <div class="text-right hidden sm:block">
-            <p class="text-sm font-bold text-slate-800 m-0">{{ user?.nombreCompleto || 'Usuario' }}</p>
-            <p class="text-xs text-slate-500 m-0">Administrador</p>
+          <div class="text-right hidden md:block">
+            <p class="text-sm font-bold text-slate-800 m-0">
+              {{ user?.nombreCompleto || 'Usuario' }}
+            </p>
+            <p class="text-xs text-slate-500 m-0">{{ user?.email }}</p>
           </div>
-          <p-avatar 
-            [label]="(user?.usuario?.charAt(0) | uppercase) || 'U'" 
-            styleClass="bg-[var(--p-primary-100)] text-[var(--p-primary-600)] font-bold" 
-            shape="circle" 
-            size="large">
+          <p-avatar
+            [label]="(user?.usuario?.charAt(0) | uppercase) || 'U'"
+            styleClass="bg-[var(--p-primary-100)] text-[var(--p-primary-600)] font-bold"
+            shape="circle"
+            size="large"
+          >
           </p-avatar>
         </div>
       </ng-template>
@@ -28,6 +31,5 @@
     <main class="flex-1 overflow-x-hidden overflow-y-auto p-8">
       <ng-content></ng-content>
     </main>
-
   </div>
 </div>

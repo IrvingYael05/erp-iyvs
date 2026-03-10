@@ -23,92 +23,163 @@
   </div>
 
   <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
-    <p-tabs value="0">
+    <p-tabs [value]="activeTab">
       <p-tablist>
-        <p-tab value="0">Integrantes</p-tab>
-        <p-tab value="1">Tickets y Tareas</p-tab>
+        <p-tab value="0" *appHasPermission="'group-detail:view'">Dashboard</p-tab>
+        <p-tab value="1" *appHasPermission="'ticket:view'">Tickets y Tareas</p-tab>
+        <p-tab value="2" *appHasPermission="'group-detail:view'">Integrantes</p-tab>
       </p-tablist>
+
       <p-tabpanels>
-        <p-tabpanel header="Integrantes" leftIcon="pi pi-users" value="0">
-          <form
-            [formGroup]="integranteForm"
-            (ngSubmit)="agregarIntegrante()"
-            class="flex flex-col sm:flex-row gap-3 mb-6 mt-2"
-          >
-            <div class="flex-1 max-w-md" *appHasPermission="'group-detail:add'">
-              <input
-                pInputText
-                type="email"
-                formControlName="email"
-                placeholder="Correo electrónico del usuario..."
-                class="w-full"
-              />
+        <p-tabpanel value="0" *appHasPermission="'group-detail:view'">
+          <div class="mt-2 mb-6">
+            <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">
+              Estado General del Grupo
+            </h3>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               <div
-                *ngIf="integranteForm.get('email')?.invalid && integranteForm.get('email')?.touched"
-                class="text-red-500 text-sm mt-1"
+                class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center shadow-sm"
               >
-                Por favor, ingresa un correo electrónico válido.
+                <span class="text-3xl font-bold text-slate-700">{{ groupStats.pendientes }}</span>
+                <span class="text-sm text-slate-500 font-medium mt-1">Pendientes</span>
+              </div>
+              <div
+                class="bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col items-center justify-center text-center shadow-sm"
+              >
+                <span class="text-3xl font-bold text-blue-700">{{ groupStats.enProgreso }}</span>
+                <span class="text-sm text-blue-600 font-medium mt-1">En Progreso</span>
+              </div>
+              <div
+                class="bg-orange-50 p-4 rounded-xl border border-orange-100 flex flex-col items-center justify-center text-center shadow-sm"
+              >
+                <span class="text-3xl font-bold text-orange-700">{{ groupStats.enRevision }}</span>
+                <span class="text-sm text-orange-600 font-medium mt-1">En Revisión</span>
+              </div>
+              <div
+                class="bg-green-50 p-4 rounded-xl border border-green-100 flex flex-col items-center justify-center text-center shadow-sm"
+              >
+                <span class="text-3xl font-bold text-green-700">{{ groupStats.finalizados }}</span>
+                <span class="text-sm text-green-600 font-medium mt-1">Hechos</span>
               </div>
             </div>
-            <p-button
-              *appHasPermission="'group-detail:add'"
-              label="Añadir al grupo"
-              icon="pi pi-plus"
-              type="submit"
-              [disabled]="integranteForm.invalid"
-            ></p-button>
-          </form>
 
-          <p-table
-            [value]="grupo?.integrantesList || []"
-            [rowHover]="true"
-            styleClass="p-datatable-sm border-t border-slate-100"
-          >
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Correo Electrónico</th>
-                <th *appHasPermission="'group-detail:delete'" class="text-right w-32">Acciones</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-email>
-              <tr>
-                <td class="font-medium text-slate-700">
-                  <i class="pi pi-user mr-2 text-slate-400"></i>
-                  {{ email }}
-                </td>
-                <td *appHasPermission="'group-detail:delete'" class="text-right">
-                  <p-button
-                    *appHasPermission="'group-detail:delete'"
-                    icon="pi pi-trash"
-                    [rounded]="true"
-                    [text]="true"
-                    severity="danger"
-                    pTooltip="Eliminar integrante"
-                    (onClick)="eliminarIntegrante(email)"
-                  ></p-button>
-                </td>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-              <tr>
-                <td colspan="2" class="text-center p-4 text-slate-500">
-                  Aún no hay integrantes en este grupo.
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+            <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">
+              Atención Requerida
+            </h3>
+
+            <p-table [value]="recentOrAssignedTickets" [rowHover]="true">
+              <ng-template pTemplate="header">
+                <tr class="bg-slate-50">
+                  <th pSortableColumn="titulo">Título <p-sortIcon field="titulo"></p-sortIcon></th>
+                  <th pSortableColumn="estado">Estado <p-sortIcon field="estado"></p-sortIcon></th>
+                  <th pSortableColumn="prioridad">
+                    Prioridad <p-sortIcon field="prioridad"></p-sortIcon>
+                  </th>
+                  <th pSortableColumn="fechaLimite">
+                    Fecha Límite <p-sortIcon field="fechaLimite"></p-sortIcon>
+                  </th>
+                  <th class="text-center">Acción</th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-ticket>
+                <tr>
+                  <td class="font-bold text-slate-800">{{ ticket.titulo }}</td>
+                  <td>
+                    <p-tag
+                      [value]="ticket.estado"
+                      [severity]="getSeverityPorEstado(ticket.estado)"
+                    ></p-tag>
+                  </td>
+                  <td>
+                    <p-tag
+                      [value]="ticket.prioridad"
+                      [severity]="getSeverityPorPrioridad(ticket.prioridad)"
+                    ></p-tag>
+                  </td>
+                  <td class="text-sm">{{ ticket.fechaLimite | date: 'shortDate' }}</td>
+                  <td class="text-center">
+                    <p-button
+                      icon="pi pi-search"
+                      [rounded]="true"
+                      [text]="true"
+                      severity="info"
+                      pTooltip="Ver detalles"
+                      (onClick)="editarTicket(ticket)"
+                    ></p-button>
+                  </td>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="emptymessage">
+                <tr>
+                  <td colspan="5" class="text-center p-6 text-slate-500">
+                    No hay tareas pendientes en este grupo.
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
         </p-tabpanel>
 
-        <p-tabpanel header="Tickets y Tareas" leftIcon="pi pi-ticket" value="1">
-          <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 mt-2">
-            <p-button
-              *appHasPermission="'ticket:add'"
-              label="Nuevo Ticket"
-              icon="pi pi-plus"
-              (onClick)="abrirNuevoTicket()"
-            ></p-button>
+        <p-tabpanel value="1" *appHasPermission="'ticket:view'">
+          <div
+            class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6 mt-2"
+          >
+            <div class="flex items-center gap-3 flex-wrap">
+              <p-button
+                *appHasPermission="'ticket:add'"
+                label="Nuevo Ticket"
+                icon="pi pi-plus"
+                (onClick)="abrirNuevoTicket()"
+              ></p-button>
 
-            <div class="flex gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
+              <div
+                *appHasPermission="'ticket:add'"
+                class="w-px h-8 bg-slate-200 hidden md:block mx-2"
+              ></div>
+
+              <div class="flex flex-wrap gap-2">
+                <p-button
+                  label="Todos"
+                  [rounded]="true"
+                  size="small"
+                  [severity]="filtroActual === 'todos' ? 'primary' : 'secondary'"
+                  [outlined]="filtroActual !== 'todos'"
+                  (onClick)="aplicarFiltro('todos')"
+                ></p-button>
+                <p-button
+                  label="Mis Tickets"
+                  icon="pi pi-user"
+                  [rounded]="true"
+                  size="small"
+                  [severity]="filtroActual === 'mis_tickets' ? 'primary' : 'secondary'"
+                  [outlined]="filtroActual !== 'mis_tickets'"
+                  (onClick)="aplicarFiltro('mis_tickets')"
+                ></p-button>
+                <p-button
+                  label="Sin Asignar"
+                  icon="pi pi-question-circle"
+                  [rounded]="true"
+                  size="small"
+                  [severity]="filtroActual === 'sin_asignar' ? 'primary' : 'secondary'"
+                  [outlined]="filtroActual !== 'sin_asignar'"
+                  (onClick)="aplicarFiltro('sin_asignar')"
+                ></p-button>
+                <p-button
+                  label="Prioridad Alta"
+                  icon="pi pi-exclamation-circle"
+                  [rounded]="true"
+                  size="small"
+                  [severity]="filtroActual === 'prioridad_alta' ? 'primary' : 'secondary'"
+                  [outlined]="filtroActual !== 'prioridad_alta'"
+                  (onClick)="aplicarFiltro('prioridad_alta')"
+                ></p-button>
+              </div>
+            </div>
+
+            <div
+              class="flex gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 w-full xl:w-auto justify-center"
+            >
               <button
                 (click)="cambiarVista('tabla')"
                 [ngClass]="{
@@ -135,7 +206,7 @@
           <div *ngIf="vistaTickets === 'tabla'">
             <p-table
               #dtTickets
-              [value]="grupo?.ticketsList || []"
+              [value]="ticketsList"
               [paginator]="true"
               [rows]="5"
               [globalFilterFields]="['titulo', 'asignadoA']"
@@ -175,7 +246,7 @@
                       [severity]="getSeverityPorPrioridad(ticket.prioridad)"
                     ></p-tag>
                   </td>
-                  <td class="text-sm text-slate-600">{{ ticket.asignadoA }}</td>
+                  <td class="text-sm text-slate-600">{{ ticket.asignadoA || 'Sin Asignar' }}</td>
                   <td class="text-sm">{{ ticket.fechaLimite | date: 'shortDate' }}</td>
                   <td *appHasPermission="['ticket:edit', 'ticket:delete']" class="text-center">
                     <p-button
@@ -200,7 +271,7 @@
               <ng-template pTemplate="emptymessage">
                 <tr>
                   <td colspan="6" class="text-center p-4 text-slate-500">
-                    No hay tickets registrados en este grupo.
+                    No se encontraron tickets con los filtros actuales.
                   </td>
                 </tr>
               </ng-template>
@@ -250,7 +321,8 @@
                     class="flex justify-between items-center text-xs text-slate-500 border-t border-slate-100 pt-2"
                   >
                     <span class="flex items-center gap-1" title="Asignado a"
-                      ><i class="pi pi-user"></i> {{ ticket.asignadoA | slice: 0 : 15 }}...</span
+                      ><i class="pi pi-user"></i>
+                      {{ (ticket.asignadoA | slice: 0 : 15) || 'Sin Asignar' }}</span
                     >
                     <span class="flex items-center gap-1 text-red-500"
                       ><i class="pi pi-calendar"></i> {{ ticket.fechaLimite | date: 'dd/MM' }}</span
@@ -268,6 +340,98 @@
             </div>
           </div>
         </p-tabpanel>
+
+        <p-tabpanel value="2" *appHasPermission="'group-detail:view'">
+          <p-table
+            #dtIntegrantes
+            [value]="integrantesObjList"
+            [paginator]="true"
+            [rows]="5"
+            [globalFilterFields]="['email']"
+            [rowHover]="true"
+          >
+            <ng-template pTemplate="caption">
+              <div class="flex justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <form
+                    [formGroup]="integranteForm"
+                    (ngSubmit)="agregarIntegrante()"
+                    class="flex flex-col sm:flex-row gap-3 mb-6 mt-2"
+                  >
+                    <div class="flex-1 max-w-md" *appHasPermission="'group-detail:add'">
+                      <input
+                        pInputText
+                        type="email"
+                        formControlName="email"
+                        placeholder="Correo electrónico..."
+                        class="w-full"
+                      />
+                      <div
+                        *ngIf="
+                          integranteForm.get('email')?.invalid &&
+                          integranteForm.get('email')?.touched
+                        "
+                        class="text-red-500 text-sm mt-1"
+                      >
+                        Por favor, ingresa un correo electrónico válido.
+                      </div>
+                    </div>
+                    <p-button
+                      *appHasPermission="'group-detail:add'"
+                      label="Añadir al grupo"
+                      icon="pi pi-plus"
+                      type="submit"
+                      [disabled]="integranteForm.invalid"
+                    ></p-button>
+                  </form>
+                </div>
+                <div class="flex items-center gap-2">
+                  <i class="pi pi-search text-slate-400"></i>
+                  <input
+                    pInputText
+                    type="text"
+                    (input)="dtIntegrantes.filterGlobal($any($event.target).value, 'contains')"
+                    placeholder="Buscar integrante..."
+                  />
+                </div>
+              </div>
+            </ng-template>
+
+            <ng-template pTemplate="header">
+              <tr>
+                <th pSortableColumn="email">
+                  Correo Electrónico <p-sortIcon field="email"></p-sortIcon>
+                </th>
+                <th *appHasPermission="'group-detail:delete'" class="text-right w-32">Acciones</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-item>
+              <tr>
+                <td class="font-medium text-slate-700">
+                  <i class="pi pi-user mr-2 text-slate-400"></i> {{ item.email }}
+                </td>
+                <td *appHasPermission="'group-detail:delete'" class="text-right">
+                  <p-button
+                    *appHasPermission="'group-detail:delete'"
+                    icon="pi pi-trash"
+                    [rounded]="true"
+                    [text]="true"
+                    severity="danger"
+                    pTooltip="Eliminar integrante"
+                    (onClick)="eliminarIntegrante(item.email)"
+                  ></p-button>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="2" class="text-center p-4 text-slate-500">
+                  No se encontraron integrantes con esa búsqueda.
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </p-tabpanel>
       </p-tabpanels>
     </p-tabs>
   </div>
@@ -275,7 +439,9 @@
   <p-dialog
     [(visible)]="ticketDialog"
     [style]="{ width: '650px' }"
-    [header]="isEditTicketMode ? 'Editar Ticket' : 'Nuevo Ticket'"
+    [header]="
+      !isEditTicketMode ? 'Nuevo Ticket' : canEditTicket ? 'Editar Ticket' : 'Detalles del Ticket'
+    "
     [modal]="true"
     styleClass="p-fluid"
     [maximizable]="true"
@@ -297,18 +463,15 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div class="flex flex-col gap-2">
-            <label class="font-semibold text-slate-700">Asignado a *</label>
+            <label class="font-semibold text-slate-700">Asignado a</label>
             <p-autoComplete
               [suggestions]="filteredIntegrantes"
               (completeMethod)="buscarIntegrante($event)"
               [dropdown]="true"
               formControlName="asignadoA"
-              placeholder="Selecciona un integrante"
+              placeholder="Sin Asignar"
               appendTo="body"
             ></p-autoComplete>
-            <small class="text-red-500" *ngIf="tf['asignadoA'].invalid && tf['asignadoA'].touched"
-              >El integrante es requerido.</small
-            >
           </div>
 
           <div class="flex flex-col gap-2">
@@ -372,7 +535,7 @@
         </div>
 
         <div class="flex flex-col gap-2">
-          <label class="font-semibold text-slate-700">Comentarios (Opcional)</label>
+          <label class="font-semibold text-slate-700">Comentarios</label>
           <textarea
             pInputTextarea
             formControlName="comentarios"
@@ -383,14 +546,14 @@
         </div>
 
         <div
-          *ngIf="isEditTicketMode && ticketForm.value.historial?.length > 0"
+          *ngIf="isEditTicketMode && ticketForm.getRawValue().historial?.length > 0"
           class="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2"
         >
           <label class="font-semibold text-slate-700 text-sm flex items-center gap-2 mb-2"
             ><i class="pi pi-history"></i> Historial de Cambios</label
           >
           <ul class="text-xs text-slate-500 pl-4 m-0 space-y-1">
-            <li *ngFor="let log of ticketForm.value.historial">{{ log }}</li>
+            <li *ngFor="let log of ticketForm.getRawValue().historial">{{ log }}</li>
           </ul>
         </div>
       </form>
@@ -398,12 +561,19 @@
 
     <ng-template pTemplate="footer">
       <p-button
-        label="Cancelar"
-        icon="pi pi-times"
+        [label]="canEditTicket ? 'Cancelar' : 'Cerrar'"
+        [icon]="canEditTicket ? 'pi pi-times' : 'pi pi-check'"
         severity="secondary"
         (onClick)="ticketDialog = false"
       ></p-button>
-      <p-button label="Guardar Ticket" icon="pi pi-check" (onClick)="guardarTicket()"></p-button>
+
+      <p-button
+        *ngIf="canEditTicket"
+        label="Guardar Ticket"
+        icon="pi pi-check"
+        (onClick)="guardarTicket()"
+      >
+      </p-button>
     </ng-template>
   </p-dialog>
 </app-main-layout>

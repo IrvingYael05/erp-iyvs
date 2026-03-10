@@ -114,14 +114,74 @@ export class GroupService {
     }
   }
 
-  getTicketStats(): {
+  getUserTickets(email: string): any[] {
+    const groups = this.getGroups();
+    let userTickets: any[] = [];
+
+    groups.forEach((g: any) => {
+      if (g.ticketsList) {
+        const tickets = g.ticketsList.filter((t: any) => t.asignadoA === email);
+        tickets.forEach((t: any) =>
+          userTickets.push({ ...t, grupoNombre: g.nombre, grupoId: g.id }),
+        );
+      }
+    });
+
+    return userTickets;
+  }
+
+  getUserTicketStats(email: string): any {
+    const tickets = this.getUserTickets(email);
+    return {
+      total: tickets.length,
+      abiertos: tickets.filter((t) => t.estado === 'Pendiente').length,
+      enProgreso: tickets.filter((t) => t.estado === 'En Progreso').length,
+      revision: tickets.filter((t) => t.estado === 'Revisión').length,
+      hechos: tickets.filter((t) => t.estado === 'Finalizado').length,
+    };
+  }
+
+  getGroupTicketsFiltered(groupId: number, filterType: string, userEmail: string): any[] {
+    const group = this.getGroupById(groupId);
+    if (!group || !group.ticketsList) return [];
+
+    let tickets = group.ticketsList;
+
+    switch (filterType) {
+      case 'mis_tickets':
+        return tickets.filter((t: any) => t.asignadoA === userEmail);
+      case 'sin_asignar':
+        return tickets.filter((t: any) => !t.asignadoA || t.asignadoA.trim() === '');
+      case 'prioridad_alta':
+        return tickets.filter((t: any) => t.prioridad === 'Alta');
+      case 'todos':
+      default:
+        return tickets;
+    }
+  }
+
+  getUserGroups(email: string): any[] {
+    const groups = this.getGroups();
+    return groups.filter(
+      (g) => g.integrantesList && g.integrantesList.includes(email?.toLowerCase()),
+    );
+  }
+
+  getTicketStats(email?: string): {
     total: number;
     pendientes: number;
     enProgreso: number;
     enRevision: number;
     finalizados: number;
   } {
-    const groups = this.getGroups();
+    let groups = this.getGroups();
+
+    if (email) {
+      groups = groups.filter(
+        (g) => g.integrantesList && g.integrantesList.includes(email.toLowerCase()),
+      );
+    }
+
     let stats = { total: 0, pendientes: 0, enProgreso: 0, enRevision: 0, finalizados: 0 };
 
     groups.forEach((g: any) => {
@@ -134,6 +194,20 @@ export class GroupService {
       }
     });
 
+    return stats;
+  }
+
+  getGroupTicketStats(groupId: number): any {
+    const group = this.getGroupById(groupId);
+    let stats = { total: 0, pendientes: 0, enProgreso: 0, enRevision: 0, finalizados: 0 };
+    
+    if (group && group.ticketsList) {
+      stats.total = group.ticketsList.length;
+      stats.pendientes = group.ticketsList.filter((t: any) => t.estado === 'Pendiente').length;
+      stats.enProgreso = group.ticketsList.filter((t: any) => t.estado === 'En Progreso').length;
+      stats.enRevision = group.ticketsList.filter((t: any) => t.estado === 'Revisión').length;
+      stats.finalizados = group.ticketsList.filter((t: any) => t.estado === 'Finalizado').length;
+    }
     return stats;
   }
 }

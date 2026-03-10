@@ -28,7 +28,19 @@ export class Sidebar implements OnInit {
     this.menuItems = [{ label: 'Inicio', icon: 'pi pi-home', routerLink: '/home' }];
 
     if (this.permissionService.hasPermission('group:view')) {
-      this.menuItems.push({ label: 'Gestión de Grupos', icon: 'pi pi-users', routerLink: '/group' });
+      this.menuItems.push({
+        label: 'Gestión de Grupos',
+        icon: 'pi pi-users',
+        routerLink: '/group',
+      });
+    }
+
+    if (this.permissionService.hasPermission('super-admin:view')) {
+      this.menuItems.push({
+        label: 'Gestión de Usuarios',
+        icon: 'pi pi-shield',
+        routerLink: '/admin/users',
+      });
     }
 
     if (this.permissionService.hasPermission('user:view')) {

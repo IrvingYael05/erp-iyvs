@@ -45,6 +45,36 @@ export class AuthService {
             'ticket:add',
             'ticket:edit',
             'ticket:delete',
+            'super-admin:view',
+            'super-admin:add',
+            'super-admin:edit',
+            'super-admin:delete',
+          ],
+        },
+        {
+          usuario: 'usuario',
+          email: 'usuario@nexoserp.com',
+          nombreCompleto: 'Usuario Regular',
+          direccion: 'Oficina Central',
+          telefono: '1234567890',
+          fechaNacimiento: new Date('1990-01-01'),
+          password: 'AdminPassword123!',
+          permissions: [
+            'group:view',
+            'group:add',
+            'group:edit',
+            'group:delete',
+            'user:view',
+            'user:edit',
+            'user:delete',
+            'group-detail:view',
+            'group-detail:add',
+            'group-detail:edit',
+            'group-detail:delete',
+            'ticket:view',
+            'ticket:add',
+            'ticket:edit',
+            'ticket:delete',
           ],
         },
       ];
@@ -72,7 +102,14 @@ export class AuthService {
   }
 
   registerUser(userData: any) {
-    userData.permissions = ['group:view', 'user:view', 'user:edit', 'user:delete', 'ticket:view'];
+    userData.permissions = [
+      'group:view',
+      'user:view',
+      'user:edit',
+      'user:delete',
+      'ticket:view',
+      'group-detail:view',
+    ];
     this.users.push(userData);
     this.saveUsers();
   }
@@ -122,7 +159,31 @@ export class AuthService {
     }
   }
 
+  addUser(userData: any) {
+    if (!userData.permissions) {
+      userData.permissions = [
+        'group:view',
+        'ticket:view',
+        'user:view',
+        'user:edit',
+        'user:delete',
+        'group-detail:view',
+      ];
+    }
+
+    userData.fechaNacimiento = null;
+    userData.direccion = '';
+    userData.telefono = '';
+
+    this.users.push(userData);
+    this.saveUsers();
+  }
+
   userExists(email: string): boolean {
     return this.users.some((u: any) => u.email.toLowerCase() === email.toLowerCase());
+  }
+
+  getAllUsers(): any[] {
+    return [...this.users];
   }
 }

@@ -11,6 +11,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { HasPermission } from '../../../core/directives/permission/has-permission';
+import { Permission } from '../../../core/services/permission/permission'; // <-- Importado
 import { GroupService } from '../../../core/services/group/group';
 import { AuthService } from '../../../core/services/auth/auth';
 import { DialogModule } from 'primeng/dialog';
@@ -19,6 +20,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TagModule } from 'primeng/tag';
 import { DragDropModule } from 'primeng/dragdrop';
+import { CardModule } from 'primeng/card';
 
 @Component({
   selector: 'app-group-detail',
@@ -40,6 +42,7 @@ import { DragDropModule } from 'primeng/dragdrop';
     DatePickerModule,
     TagModule,
     DragDropModule,
+    CardModule,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './group-detail.html',
@@ -53,9 +56,12 @@ export class GroupDetail implements OnInit {
   private confirmationService = inject(ConfirmationService);
   private groupService = inject(GroupService);
   private authService = inject(AuthService);
+  private permissionService = inject(Permission);
 
   grupoId: number | null = null;
   grupo: any = null;
+
+  activeTab: string = '0';
 
   integranteForm: FormGroup = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -64,6 +70,9 @@ export class GroupDetail implements OnInit {
   vistaTickets: 'tabla' | 'kanban' = 'tabla';
   ticketDialog: boolean = false;
   isEditTicketMode: boolean = false;
+  canEditTicket: boolean = true;
+
+  filtroActual: 'todos' | 'mis_tickets' | 'sin_asignar' | 'prioridad_alta' = 'todos';
 
   estados = ['Pendiente', 'En Progreso', 'Revisión', 'Finalizado'];
   prioridades = ['Baja', 'Media', 'Alta'];
@@ -71,6 +80,10 @@ export class GroupDetail implements OnInit {
   filteredIntegrantes: string[] = [];
   filteredEstados: string[] = [];
   filteredPrioridades: string[] = [];
+  ticketsList: any[] = [];
+
+  groupStats: any = {};
+  recentOrAssignedTickets: any[] = [];
 
   minDate: Date = new Date();
   draggedTicket: any | null = null;
@@ -80,12 +93,13 @@ export class GroupDetail implements OnInit {
     titulo: ['', Validators.required],
     descripcion: ['', Validators.required],
     estado: ['Pendiente', Validators.required],
-    asignadoA: ['', Validators.required],
+    asignadoA: [''],
     prioridad: ['Media', Validators.required],
     fechaLimite: [null, Validators.required],
     comentarios: [''],
     fechaCreacion: [null],
     historial: [[]],
+    autorEmail: [null],
   });
 
   ngOnInit() {
@@ -98,6 +112,12 @@ export class GroupDetail implements OnInit {
         this.volverDirectorio();
       }
     });
+
+    if (this.permissionService.hasPermission('group-detail:view')) {
+      this.activeTab = '0';
+    } else if (this.permissionService.hasPermission('ticket:view')) {
+      this.activeTab = '1';
+    }
   }
 
   loadGroup() {
@@ -109,14 +129,31 @@ export class GroupDetail implements OnInit {
         detail: 'Grupo no encontrado',
       });
       this.volverDirectorio();
+    } else {
+      this.aplicarFiltro(this.filtroActual);
+      this.loadDashboardData();
+    }
+  }
+
+  loadDashboardData() {
+    this.groupStats = this.groupService.getGroupTicketStats(this.grupoId!);
+    const currentUserEmail = this.authService.getCurrentUser()?.email;
+    const misTickets = this.groupService.getGroupTicketsFiltered(
+      this.grupoId!,
+      'mis_tickets',
+      currentUserEmail!,
+    );
+
+    if (misTickets.length > 0) {
+      this.recentOrAssignedTickets = misTickets.slice(0, 5);
+    } else {
+      this.recentOrAssignedTickets = [...this.grupo.ticketsList].reverse().slice(0, 5);
     }
   }
 
   volverDirectorio() {
     this.router.navigate(['/group']);
   }
-
-  // --- INTEGRANTES ---
 
   agregarIntegrante() {
     if (this.integranteForm.invalid) return;
@@ -130,7 +167,6 @@ export class GroupDetail implements OnInit {
       });
       return;
     }
-
     if (this.grupo.integrantesList?.includes(emailNuevo)) {
       this.messageService.add({
         severity: 'warn',
@@ -142,7 +178,6 @@ export class GroupDetail implements OnInit {
 
     this.groupService.addMember(this.grupoId!, emailNuevo);
     this.loadGroup();
-
     this.messageService.add({
       severity: 'success',
       summary: 'Éxito',
@@ -172,7 +207,6 @@ export class GroupDetail implements OnInit {
 
         this.groupService.removeMember(this.grupoId!, email);
         this.loadGroup();
-
         this.messageService.add({
           severity: 'success',
           summary: 'Éxito',
@@ -182,15 +216,22 @@ export class GroupDetail implements OnInit {
     });
   }
 
-  // --- TICKETS ---
-
   cambiarVista(vista: 'tabla' | 'kanban') {
     this.vistaTickets = vista;
   }
 
+  aplicarFiltro(nuevoFiltro: 'todos' | 'mis_tickets' | 'sin_asignar' | 'prioridad_alta') {
+    this.filtroActual = nuevoFiltro;
+    const currentUserEmail = this.authService.getCurrentUser()?.email;
+    this.ticketsList = this.groupService.getGroupTicketsFiltered(
+      this.grupoId!,
+      this.filtroActual,
+      currentUserEmail!,
+    );
+  }
+
   getTicketsPorEstado(estado: string) {
-    if (!this.grupo || !this.grupo.ticketsList) return [];
-    return this.grupo.ticketsList.filter((t: any) => t.estado === estado);
+    return this.ticketsList.filter((t: any) => t.estado === estado);
   }
 
   dragStart(ticket: any) {
@@ -202,9 +243,33 @@ export class GroupDetail implements OnInit {
   }
 
   drop(estadoDestino: string) {
+    if (!this.permissionService.hasPermission('ticket:edit')) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Acceso Denegado',
+        detail: 'No tienes permiso para editar el estado de los tickets.',
+      });
+      this.draggedTicket = null;
+      return;
+    }
+
     if (this.draggedTicket && this.draggedTicket.estado !== estadoDestino) {
-      const currentUser = this.authService.getCurrentUser()?.nombreCompleto || 'Usuario';
-      const fechaActual = new Date().toLocaleString();
+      const currentUserEmail = this.authService.getCurrentUser()?.email;
+      const currentUserNombre = this.authService.getCurrentUser()?.nombreCompleto || 'Usuario';
+
+      if (
+        this.draggedTicket.autorEmail &&
+        this.draggedTicket.autorEmail !== currentUserEmail &&
+        this.draggedTicket.asignadoA !== currentUserEmail
+      ) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Acceso Denegado',
+          detail: 'No tienes permisos para mover este ticket.',
+        });
+        this.draggedTicket = null;
+        return;
+      }
 
       const index = this.grupo.ticketsList.findIndex((t: any) => t.id === this.draggedTicket.id);
 
@@ -214,12 +279,11 @@ export class GroupDetail implements OnInit {
 
         if (!ticket.historial) ticket.historial = [];
         ticket.historial.push(
-          `${currentUser} movió el ticket a '${estadoDestino}' el ${fechaActual}`,
+          `${currentUserNombre} movió el ticket a '${estadoDestino}' el ${new Date().toLocaleString()}`,
         );
 
         this.groupService.updateTicket(this.grupoId!, ticket);
         this.loadGroup();
-
         this.messageService.add({
           severity: 'info',
           summary: 'Ticket Actualizado',
@@ -237,12 +301,10 @@ export class GroupDetail implements OnInit {
       email.toLowerCase().includes(query),
     );
   }
-
   buscarEstado(event: any) {
     const query = event.query.toLowerCase();
     this.filteredEstados = this.estados.filter((e) => e.toLowerCase().includes(query));
   }
-
   buscarPrioridad(event: any) {
     const query = event.query.toLowerCase();
     this.filteredPrioridades = this.prioridades.filter((p) => p.toLowerCase().includes(query));
@@ -250,17 +312,50 @@ export class GroupDetail implements OnInit {
 
   abrirNuevoTicket() {
     this.isEditTicketMode = false;
-    this.ticketForm.reset({ estado: 'Pendiente', prioridad: 'Media', historial: [] });
+    this.canEditTicket = true;
+    this.ticketForm.enable();
+
+    this.ticketForm.reset({
+      estado: 'Pendiente',
+      prioridad: 'Media',
+      historial: [],
+      asignadoA: '',
+      autorEmail: null,
+    });
     this.ticketDialog = true;
   }
 
   editarTicket(ticket: any) {
     this.isEditTicketMode = true;
+    this.canEditTicket = true;
+    this.ticketForm.enable();
+
     const ticketParsed = {
       ...ticket,
       fechaLimite: ticket.fechaLimite ? new Date(ticket.fechaLimite) : null,
     };
     this.ticketForm.patchValue(ticketParsed);
+
+    const currentUserEmail = this.authService.getCurrentUser()?.email;
+    const hasGlobalEdit = this.permissionService.hasPermission('ticket:edit');
+
+    if (!hasGlobalEdit) {
+      this.ticketForm.disable();
+      this.canEditTicket = false;
+    } else {
+      if (ticket.autorEmail && ticket.autorEmail !== currentUserEmail) {
+        if (ticket.asignadoA === currentUserEmail) {
+          this.ticketForm.get('titulo')?.disable();
+          this.ticketForm.get('descripcion')?.disable();
+          this.ticketForm.get('asignadoA')?.disable();
+          this.ticketForm.get('prioridad')?.disable();
+          this.ticketForm.get('fechaLimite')?.disable();
+        } else {
+          this.ticketForm.disable();
+          this.canEditTicket = false;
+        }
+      }
+    }
     this.ticketDialog = true;
   }
 
@@ -290,8 +385,9 @@ export class GroupDetail implements OnInit {
       return;
     }
 
-    const formValue = this.ticketForm.value;
+    const formValue = this.ticketForm.getRawValue();
     const currentUser = this.authService.getCurrentUser()?.nombreCompleto || 'Usuario';
+    const currentUserEmail = this.authService.getCurrentUser()?.email;
     const fechaActual = new Date().toLocaleString();
 
     if (
@@ -324,7 +420,11 @@ export class GroupDetail implements OnInit {
       });
       return;
     }
-    if (!this.grupo.integrantesList.includes(formValue.asignadoA)) {
+    if (
+      formValue.asignadoA &&
+      formValue.asignadoA.trim() !== '' &&
+      !this.grupo.integrantesList.includes(formValue.asignadoA)
+    ) {
       this.messageService.add({
         severity: 'error',
         summary: 'Error',
@@ -344,7 +444,7 @@ export class GroupDetail implements OnInit {
       if (ticketAnterior.estado !== formValue.estado)
         cambios.push(`cambió el estado a '${formValue.estado}'`);
       if (ticketAnterior.asignadoA !== formValue.asignadoA)
-        cambios.push(`reasignó la tarea a '${formValue.asignadoA}'`);
+        cambios.push(`reasignó la tarea a '${formValue.asignadoA || 'Nadie'}'`);
       if (ticketAnterior.prioridad !== formValue.prioridad)
         cambios.push(`cambió la prioridad a '${formValue.prioridad}'`);
 
@@ -352,7 +452,6 @@ export class GroupDetail implements OnInit {
         historial.push(`${currentUser} ${cambios.join(', ')} el ${fechaActual}`);
 
       formValue.historial = historial;
-
       this.groupService.updateTicket(this.grupoId!, formValue);
       this.messageService.add({
         severity: 'success',
@@ -361,6 +460,7 @@ export class GroupDetail implements OnInit {
       });
     } else {
       formValue.fechaCreacion = new Date();
+      formValue.autorEmail = currentUserEmail;
       formValue.historial = [`${currentUser} creó el ticket el ${fechaActual}`];
 
       this.groupService.addTicket(this.grupoId!, formValue);
@@ -397,6 +497,11 @@ export class GroupDetail implements OnInit {
       default:
         return 'info';
     }
+  }
+
+  get integrantesObjList() {
+    if (!this.grupo || !this.grupo.integrantesList) return [];
+    return this.grupo.integrantesList.map((email: string) => ({ email }));
   }
 
   get tf() {

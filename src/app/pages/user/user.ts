@@ -2,9 +2,12 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MainLayout } from '../../layout/main-layout/main-layout';
 import { AuthService } from '../../core/services/auth/auth';
+import { GroupService } from '../../core/services/group/group';
 import { CardModule } from 'primeng/card';
 import { AvatarModule } from 'primeng/avatar';
 import { DividerModule } from 'primeng/divider';
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
 import {
   FormBuilder,
   FormGroup,
@@ -50,6 +53,8 @@ function ageValidator(control: AbstractControl): ValidationErrors | null {
     ToastModule,
     ConfirmDialogModule,
     HasPermission,
+    TableModule,
+    TagModule,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './user.html',
@@ -57,6 +62,7 @@ function ageValidator(control: AbstractControl): ValidationErrors | null {
 })
 export class User implements OnInit {
   private authService = inject(AuthService);
+  private groupService = inject(GroupService);
   private fb = inject(FormBuilder);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
@@ -64,6 +70,11 @@ export class User implements OnInit {
 
   userData = this.authService.getCurrentUser();
   profileForm!: FormGroup;
+
+  minDate: Date = new Date();
+
+  misTickets: any[] = [];
+  misEstadisticas: any = {};
 
   ngOnInit() {
     this.profileForm = this.fb.group({
@@ -80,6 +91,15 @@ export class User implements OnInit {
         [Validators.required, ageValidator],
       ],
     });
+
+    this.cargarDatosLaborales();
+  }
+
+  cargarDatosLaborales() {
+    if (this.userData?.email) {
+      this.misTickets = this.groupService.getUserTickets(this.userData.email);
+      this.misEstadisticas = this.groupService.getUserTicketStats(this.userData.email);
+    }
   }
 
   onUpdateProfile() {
@@ -123,6 +143,38 @@ export class User implements OnInit {
         }, 2000);
       },
     });
+  }
+
+  irAlGrupo(grupoId: number) {
+    this.router.navigate(['/group', grupoId]);
+  }
+
+  getSeverityPorEstado(estado: string): any {
+    switch (estado) {
+      case 'Pendiente':
+        return 'secondary';
+      case 'En Progreso':
+        return 'info';
+      case 'Revisión':
+        return 'warn';
+      case 'Finalizado':
+        return 'success';
+      default:
+        return 'info';
+    }
+  }
+
+  getSeverityPorPrioridad(prioridad: string): any {
+    switch (prioridad) {
+      case 'Baja':
+        return 'success';
+      case 'Media':
+        return 'warn';
+      case 'Alta':
+        return 'danger';
+      default:
+        return 'info';
+    }
   }
 
   get f() {

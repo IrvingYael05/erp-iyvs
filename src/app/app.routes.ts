@@ -44,6 +44,12 @@ export const routes: Routes = [
     data: { permission: 'user:view' },
   },
   {
+    path: 'admin/users',
+    loadComponent: () => import('./pages/admin-users/admin-users').then((c) => c.AdminUsers),
+    canActivate: [authGuard, permissionGuard],
+    data: { permission: 'super-admin:view' },
+  },
+  {
     path: '**',
     loadComponent: () => import('./pages/not-found/not-found').then((c) => c.NotFound),
   },
