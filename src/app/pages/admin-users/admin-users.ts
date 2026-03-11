@@ -97,7 +97,7 @@ export class AdminUsers implements OnInit {
   }
 
   isSuperAdmin(user: any): boolean {
-    return user.permissions?.some((p: string) => p.startsWith('super-admin:'));
+    return user.permissions?.some((p: string) => p.startsWith('user-manage:'));
   }
 
   openNewUser() {

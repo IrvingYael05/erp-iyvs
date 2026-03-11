@@ -35,7 +35,7 @@ export class Sidebar implements OnInit {
       });
     }
 
-    if (this.permissionService.hasPermission('super-admin:view')) {
+    if (this.permissionService.hasPermission('user-manage:view')) {
       this.menuItems.push({
         label: 'Gestión de Usuarios',
         icon: 'pi pi-shield',

@@ -16,7 +16,7 @@
       <ng-template pTemplate="caption">
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <p-button
-            *appHasPermission="'super-admin:add'"
+            *appHasPermission="'user-manage:add'"
             label="Nuevo Usuario"
             icon="pi pi-plus"
             (onClick)="openNewUser()"
@@ -45,7 +45,7 @@
             Correo Electrónico <p-sortIcon field="email"></p-sortIcon>
           </th>
           <th>Estado de Permisos</th>
-          <th *appHasPermission="['super-admin:edit', 'super-admin:delete']" class="text-center">
+          <th *appHasPermission="['user-manage:edit', 'user-manage:delete']" class="text-center">
             Acciones
           </th>
         </tr>
@@ -65,9 +65,9 @@
               class="ml-2"
             ></p-tag>
           </td>
-          <td *appHasPermission="['super-admin:edit', 'super-admin:delete']" class="text-center">
+          <td *appHasPermission="['user-manage:edit', 'user-manage:delete']" class="text-center">
             <p-button
-              *appHasPermission="'super-admin:edit'"
+              *appHasPermission="'user-manage:edit'"
               icon="pi pi-shield"
               pTooltip="Gestionar Permisos"
               [rounded]="true"
@@ -76,7 +76,7 @@
               (onClick)="openPermissions(user)"
             ></p-button>
             <p-button
-              *appHasPermission="'super-admin:delete'"
+              *appHasPermission="'user-manage:delete'"
               icon="pi pi-trash"
               pTooltip="Eliminar Usuario"
               [rounded]="true"
