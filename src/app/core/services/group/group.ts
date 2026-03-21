@@ -22,6 +22,9 @@ export class GroupService {
           integrantesList: ['admin@nexoserp.com'],
           ticketsList: [],
           descripcion: 'Equipo encargado de Angular',
+          memberPermissions: {
+            'admin@nexoserp.com': ['ticket:view', 'ticket:add', 'ticket:edit', 'ticket:delete'],
+          },
         },
       ];
       this.saveToStorage(defaultGroups);
@@ -44,7 +47,15 @@ export class GroupService {
 
   createGroup(group: any): any {
     const groups = this.getGroups();
-    group.id = groups.length > 0 ? Math.max(...groups.map((g) => g.id)) + 1 : 1;
+    group.id = groups.length > 0 ? Math.max(...groups.map((g: any) => g.id)) + 1 : 1;
+
+    if (group.integrantesList && group.integrantesList.length > 0) {
+      const creadorEmail = group.integrantesList[0];
+      group.memberPermissions = {
+        [creadorEmail]: ['ticket:view', 'ticket:add', 'ticket:edit', 'ticket:delete'],
+      };
+    }
+
     groups.push(group);
     this.saveToStorage(groups);
     return group;
@@ -71,6 +82,16 @@ export class GroupService {
       if (!group.integrantesList) group.integrantesList = [];
       if (!group.integrantesList.includes(email)) {
         group.integrantesList.push(email);
+
+        if (!group.memberPermissions) group.memberPermissions = {};
+
+        group.memberPermissions[email] = [
+          'ticket:view',
+          'ticket:add',
+          'ticket:edit',
+          'ticket:delete',
+        ];
+
         this.updateGroup(group);
       }
     }
@@ -80,6 +101,11 @@ export class GroupService {
     const group = this.getGroupById(groupId);
     if (group && group.integrantesList) {
       group.integrantesList = group.integrantesList.filter((e: string) => e !== email);
+
+      if (group.memberPermissions && group.memberPermissions[email]) {
+        delete group.memberPermissions[email];
+      }
+
       this.updateGroup(group);
     }
   }
@@ -119,7 +145,7 @@ export class GroupService {
     let userTickets: any[] = [];
 
     groups.forEach((g: any) => {
-      if (g.ticketsList) {
+      if (g.ticketsList && this.hasLocalPermission(g.id, email, 'ticket:view')) {
         const tickets = g.ticketsList.filter((t: any) => t.asignadoA === email);
         tickets.forEach((t: any) =>
           userTickets.push({ ...t, grupoNombre: g.nombre, grupoId: g.id }),
@@ -178,7 +204,10 @@ export class GroupService {
 
     if (email) {
       groups = groups.filter(
-        (g) => g.integrantesList && g.integrantesList.includes(email.toLowerCase()),
+        (g) =>
+          g.integrantesList &&
+          g.integrantesList.includes(email.toLowerCase()) &&
+          this.hasLocalPermission(g.id, email.toLowerCase(), 'ticket:view'),
       );
     }
 
@@ -200,7 +229,7 @@ export class GroupService {
   getGroupTicketStats(groupId: number): any {
     const group = this.getGroupById(groupId);
     let stats = { total: 0, pendientes: 0, enProgreso: 0, enRevision: 0, finalizados: 0 };
-    
+
     if (group && group.ticketsList) {
       stats.total = group.ticketsList.length;
       stats.pendientes = group.ticketsList.filter((t: any) => t.estado === 'Pendiente').length;
@@ -209,5 +238,22 @@ export class GroupService {
       stats.finalizados = group.ticketsList.filter((t: any) => t.estado === 'Finalizado').length;
     }
     return stats;
+  }
+
+  hasLocalPermission(groupId: number, email: string, permission: string): boolean {
+    const group = this.getGroupById(groupId);
+    if (!group || !group.memberPermissions || !group.memberPermissions[email]) {
+      return false;
+    }
+    return group.memberPermissions[email].includes(permission);
+  }
+
+  updateMemberPermissions(groupId: number, email: string, permissions: string[]): void {
+    const group = this.getGroupById(groupId);
+    if (group) {
+      if (!group.memberPermissions) group.memberPermissions = {};
+      group.memberPermissions[email] = permissions;
+      this.updateGroup(group);
+    }
   }
 }

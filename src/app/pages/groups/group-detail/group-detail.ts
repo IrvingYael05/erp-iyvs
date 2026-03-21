@@ -11,7 +11,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { HasPermission } from '../../../core/directives/permission/has-permission';
-import { Permission } from '../../../core/services/permission/permission'; // <-- Importado
+import { Permission } from '../../../core/services/permission/permission';
 import { GroupService } from '../../../core/services/group/group';
 import { AuthService } from '../../../core/services/auth/auth';
 import { DialogModule } from 'primeng/dialog';
@@ -21,6 +21,8 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { TagModule } from 'primeng/tag';
 import { DragDropModule } from 'primeng/dragdrop';
 import { CardModule } from 'primeng/card';
+import { FormsModule } from '@angular/forms';
+import { CheckboxModule } from 'primeng/checkbox';
 
 @Component({
   selector: 'app-group-detail',
@@ -43,6 +45,8 @@ import { CardModule } from 'primeng/card';
     TagModule,
     DragDropModule,
     CardModule,
+    FormsModule,
+    CheckboxModule,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './group-detail.html',
@@ -62,6 +66,7 @@ export class GroupDetail implements OnInit {
   grupo: any = null;
 
   activeTab: string = '0';
+  activeTicketTab: string = '0';
 
   integranteForm: FormGroup = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -81,12 +86,15 @@ export class GroupDetail implements OnInit {
   filteredEstados: string[] = [];
   filteredPrioridades: string[] = [];
   ticketsList: any[] = [];
+  integrantesObjList: any[] = [];
 
   groupStats: any = {};
   recentOrAssignedTickets: any[] = [];
 
   minDate: Date = new Date();
   draggedTicket: any | null = null;
+
+  currentTicket: any = null;
 
   ticketForm: FormGroup = this.fb.group({
     id: [null],
@@ -96,11 +104,34 @@ export class GroupDetail implements OnInit {
     asignadoA: [''],
     prioridad: ['Media', Validators.required],
     fechaLimite: [null, Validators.required],
-    comentarios: [''],
+    nuevoComentario: [''],
     fechaCreacion: [null],
     historial: [[]],
     autorEmail: [null],
   });
+
+  permissionsDialog: boolean = false;
+  selectedMemberEmail: string = '';
+  selectedMemberPermissions: string[] = [];
+  ticketPermissions = [
+    { key: 'ticket:view', label: 'Ver Tickets' },
+    { key: 'ticket:add', label: 'Crear Tickets' },
+    { key: 'ticket:edit', label: 'Editar Tickets' },
+    { key: 'ticket:delete', label: 'Eliminar Tickets' },
+  ];
+
+  get currentUserEmail(): string {
+    return this.authService.getCurrentUser()?.email || '';
+  }
+
+  hasLocalPerm(action: string): boolean {
+    if (!this.grupoId || !this.currentUserEmail) return false;
+    return this.groupService.hasLocalPermission(
+      this.grupoId,
+      this.currentUserEmail,
+      `ticket:${action}`,
+    );
+  }
 
   ngOnInit() {
     this.route.paramMap.subscribe((params) => {
@@ -115,7 +146,7 @@ export class GroupDetail implements OnInit {
 
     if (this.permissionService.hasPermission('group-detail:view')) {
       this.activeTab = '0';
-    } else if (this.permissionService.hasPermission('ticket:view')) {
+    } else if (this.hasLocalPerm('view')) {
       this.activeTab = '1';
     }
   }
@@ -132,6 +163,9 @@ export class GroupDetail implements OnInit {
     } else {
       this.aplicarFiltro(this.filtroActual);
       this.loadDashboardData();
+      this.integrantesObjList = (this.grupo.integrantesList || []).map((email: string) => ({
+        email,
+      }));
     }
   }
 
@@ -184,6 +218,61 @@ export class GroupDetail implements OnInit {
       detail: 'Integrante agregado correctamente.',
     });
     this.integranteForm.reset();
+
+    this.abrirModalPermisos(emailNuevo);
+  }
+
+  abrirModalPermisos(email: string) {
+    if (email === this.authService.getCurrentUser()?.usuario) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Acción Denegada',
+        detail: 'No puedes editar tu propia cuenta.',
+      });
+      return;
+    }
+    this.selectedMemberEmail = email;
+    const group = this.groupService.getGroupById(this.grupoId!);
+    this.selectedMemberPermissions =
+      group.memberPermissions && group.memberPermissions[email]
+        ? [...group.memberPermissions[email]]
+        : [];
+    this.permissionsDialog = true;
+  }
+
+  guardarPermisosLocales() {
+    if (this.selectedMemberEmail === this.authService.getCurrentUser()?.usuario) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Acción Denegada',
+        detail: 'No puedes editar tu propia cuenta.',
+      });
+      return;
+    }
+    this.groupService.updateMemberPermissions(
+      this.grupoId!,
+      this.selectedMemberEmail,
+      this.selectedMemberPermissions,
+    );
+    this.loadGroup();
+    this.permissionsDialog = false;
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Éxito',
+      detail: 'Permisos del integrante actualizados',
+    });
+  }
+
+  onLocalPermissionChange(event: any, actKey: string) {
+    const isChecked = event.checked;
+
+    if (isChecked && actKey !== 'ticket:view') {
+      if (!this.selectedMemberPermissions.includes('ticket:view')) {
+        this.selectedMemberPermissions = [...this.selectedMemberPermissions, 'ticket:view'];
+      }
+    } else if (actKey === 'ticket:view') {
+      this.selectedMemberPermissions = [];
+    }
   }
 
   eliminarIntegrante(email: string) {
@@ -243,7 +332,7 @@ export class GroupDetail implements OnInit {
   }
 
   drop(estadoDestino: string) {
-    if (!this.permissionService.hasPermission('ticket:edit')) {
+    if (!this.hasLocalPerm('edit')) {
       this.messageService.add({
         severity: 'error',
         summary: 'Acceso Denegado',
@@ -278,9 +367,10 @@ export class GroupDetail implements OnInit {
         ticket.estado = estadoDestino;
 
         if (!ticket.historial) ticket.historial = [];
-        ticket.historial.push(
-          `${currentUserNombre} movió el ticket a '${estadoDestino}' el ${new Date().toLocaleString()}`,
-        );
+        ticket.historial.push({
+          fecha: new Date(),
+          descripcion: `${currentUserNombre} movió el ticket a '${estadoDestino}'`,
+        });
 
         this.groupService.updateTicket(this.grupoId!, ticket);
         this.loadGroup();
@@ -315,12 +405,15 @@ export class GroupDetail implements OnInit {
     this.canEditTicket = true;
     this.ticketForm.enable();
 
+    this.currentTicket = { historial: [], comentariosList: [] };
+
     this.ticketForm.reset({
       estado: 'Pendiente',
       prioridad: 'Media',
       historial: [],
       asignadoA: '',
       autorEmail: null,
+      nuevoComentario: '',
     });
     this.ticketDialog = true;
   }
@@ -330,16 +423,23 @@ export class GroupDetail implements OnInit {
     this.canEditTicket = true;
     this.ticketForm.enable();
 
+    this.currentTicket = { ...ticket };
+    if (!this.currentTicket.comentariosList) this.currentTicket.comentariosList = [];
+
     const ticketParsed = {
       ...ticket,
       fechaLimite: ticket.fechaLimite ? new Date(ticket.fechaLimite) : null,
     };
-    this.ticketForm.patchValue(ticketParsed);
+
+    this.ticketForm.patchValue({
+      ...ticketParsed,
+      nuevoComentario: '',
+    });
 
     const currentUserEmail = this.authService.getCurrentUser()?.email;
-    const hasGlobalEdit = this.permissionService.hasPermission('ticket:edit');
+    const hasLocalEdit = this.hasLocalPerm('edit');
 
-    if (!hasGlobalEdit) {
+    if (!hasLocalEdit) {
       this.ticketForm.disable();
       this.canEditTicket = false;
     } else {
@@ -376,6 +476,31 @@ export class GroupDetail implements OnInit {
           detail: 'Ticket eliminado',
         });
       },
+    });
+  }
+
+  agregarComentario() {
+    const texto = this.ticketForm.get('nuevoComentario')?.value;
+    if (!texto || texto.trim() === '') return;
+
+    const currentUser = this.authService.getCurrentUser()?.nombreCompleto || 'Usuario';
+    const nuevoComentarioObj = {
+      autor: currentUser,
+      fecha: new Date(),
+      texto: texto.trim(),
+    };
+
+    this.currentTicket.comentariosList.push(nuevoComentarioObj);
+
+    const ticketToUpdate = { ...this.currentTicket };
+    this.groupService.updateTicket(this.grupoId!, ticketToUpdate);
+    this.loadGroup();
+
+    this.ticketForm.get('nuevoComentario')?.reset();
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Comentario añadido',
+      detail: 'Tu nota ha sido guardada.',
     });
   }
 
@@ -434,6 +559,8 @@ export class GroupDetail implements OnInit {
       return;
     }
 
+    formValue.comentariosList = this.currentTicket?.comentariosList || [];
+
     if (this.isEditTicketMode) {
       const index = this.grupo.ticketsList.findIndex((t: any) => t.id === formValue.id);
       const ticketAnterior = this.grupo.ticketsList[index];
@@ -448,8 +575,12 @@ export class GroupDetail implements OnInit {
       if (ticketAnterior.prioridad !== formValue.prioridad)
         cambios.push(`cambió la prioridad a '${formValue.prioridad}'`);
 
-      if (cambios.length > 0)
-        historial.push(`${currentUser} ${cambios.join(', ')} el ${fechaActual}`);
+      if (cambios.length > 0) {
+        historial.push({
+          fecha: new Date(),
+          descripcion: `${currentUser} ${cambios.join(', ')}`,
+        });
+      }
 
       formValue.historial = historial;
       this.groupService.updateTicket(this.grupoId!, formValue);
@@ -461,7 +592,12 @@ export class GroupDetail implements OnInit {
     } else {
       formValue.fechaCreacion = new Date();
       formValue.autorEmail = currentUserEmail;
-      formValue.historial = [`${currentUser} creó el ticket el ${fechaActual}`];
+      formValue.historial = [
+        {
+          fecha: new Date(),
+          descripcion: `${currentUser} creó el ticket`,
+        },
+      ];
 
       this.groupService.addTicket(this.grupoId!, formValue);
       this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Ticket creado' });
@@ -497,11 +633,6 @@ export class GroupDetail implements OnInit {
       default:
         return 'info';
     }
-  }
-
-  get integrantesObjList() {
-    if (!this.grupo || !this.grupo.integrantesList) return [];
-    return this.grupo.integrantesList.map((email: string) => ({ email }));
   }
 
   get tf() {

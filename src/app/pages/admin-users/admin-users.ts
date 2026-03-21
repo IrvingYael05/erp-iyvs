@@ -76,9 +76,8 @@ export class AdminUsers implements OnInit {
   modules = [
     { key: 'group', label: 'Grupos' },
     { key: 'group-detail', label: 'Gestión Grupo' },
-    { key: 'ticket', label: 'Tickets' },
     { key: 'user', label: 'Perfil Usuario' },
-    { key: 'super-admin', label: 'Super Admin' },
+    { key: 'user-manage', label: 'Gestión Usuarios' },
   ];
 
   actions = [
@@ -169,6 +168,14 @@ export class AdminUsers implements OnInit {
   }
 
   openPermissions(user: any) {
+    if (user.usuario === this.authService.getCurrentUser()?.usuario) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Acción Denegada',
+        detail: 'No puedes editar tu propia cuenta.',
+      });
+      return;
+    }
     this.selectedUser = user;
     this.selectedPermissions = [...(user.permissions || [])];
     this.permissionsDialog = true;

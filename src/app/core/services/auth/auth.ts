@@ -41,10 +41,6 @@ export class AuthService {
             'group-detail:add',
             'group-detail:edit',
             'group-detail:delete',
-            'ticket:view',
-            'ticket:add',
-            'ticket:edit',
-            'ticket:delete',
             'user-manage:view',
             'user-manage:add',
             'user-manage:edit',
@@ -71,10 +67,6 @@ export class AuthService {
             'group-detail:add',
             'group-detail:edit',
             'group-detail:delete',
-            'ticket:view',
-            'ticket:add',
-            'ticket:edit',
-            'ticket:delete',
           ],
         },
       ];
@@ -107,7 +99,6 @@ export class AuthService {
       'user:view',
       'user:edit',
       'user:delete',
-      'ticket:view',
       'group-detail:view',
     ];
     this.users.push(userData);
@@ -163,7 +154,6 @@ export class AuthService {
     if (!userData.permissions) {
       userData.permissions = [
         'group:view',
-        'ticket:view',
         'user:view',
         'user:edit',
         'user:delete',

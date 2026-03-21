@@ -8,12 +8,11 @@ import { ChartModule } from 'primeng/chart';
 import { GroupService } from '../../core/services/group/group';
 import { Permission } from '../../core/services/permission/permission';
 import { AuthService } from '../../core/services/auth/auth';
-import { HasPermission } from '../../core/directives/permission/has-permission';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, MainLayout, CardModule, ButtonModule, ChartModule, HasPermission],
+  imports: [CommonModule, MainLayout, CardModule, ButtonModule, ChartModule],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })

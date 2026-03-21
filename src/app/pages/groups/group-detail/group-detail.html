@@ -26,11 +26,12 @@
     <p-tabs [value]="activeTab">
       <p-tablist>
         <p-tab value="0" *appHasPermission="'group-detail:view'">Dashboard</p-tab>
-        <p-tab value="1" *appHasPermission="'ticket:view'">Tickets y Tareas</p-tab>
+        <p-tab value="1" *ngIf="hasLocalPerm('view')">Tickets y Tareas</p-tab>
         <p-tab value="2" *appHasPermission="'group-detail:view'">Integrantes</p-tab>
       </p-tablist>
 
       <p-tabpanels>
+        <!--Apartado de Dashboard-->
         <p-tabpanel value="0" *appHasPermission="'group-detail:view'">
           <div class="mt-2 mb-6">
             <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">
@@ -121,20 +122,21 @@
           </div>
         </p-tabpanel>
 
-        <p-tabpanel value="1" *appHasPermission="'ticket:view'">
+        <!--Apartado de Tickets-->
+        <p-tabpanel value="1" *ngIf="hasLocalPerm('view')">
           <div
             class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6 mt-2"
           >
             <div class="flex items-center gap-3 flex-wrap">
               <p-button
-                *appHasPermission="'ticket:add'"
+                *ngIf="hasLocalPerm('view')"
                 label="Nuevo Ticket"
                 icon="pi pi-plus"
                 (onClick)="abrirNuevoTicket()"
               ></p-button>
 
               <div
-                *appHasPermission="'ticket:add'"
+                *ngIf="hasLocalPerm('view')"
                 class="w-px h-8 bg-slate-200 hidden md:block mx-2"
               ></div>
 
@@ -226,7 +228,7 @@
                   <th pSortableColumn="fechaLimite">
                     Vencimiento <p-sortIcon field="fechaLimite"></p-sortIcon>
                   </th>
-                  <th *appHasPermission="['ticket:edit', 'ticket:delete']" class="text-center">
+                  <th *ngIf="hasLocalPerm('edit') || hasLocalPerm('delete')" class="text-center">
                     Acciones
                   </th>
                 </tr>
@@ -248,9 +250,9 @@
                   </td>
                   <td class="text-sm text-slate-600">{{ ticket.asignadoA || 'Sin Asignar' }}</td>
                   <td class="text-sm">{{ ticket.fechaLimite | date: 'shortDate' }}</td>
-                  <td *appHasPermission="['ticket:edit', 'ticket:delete']" class="text-center">
+                  <td *ngIf="hasLocalPerm('edit') || hasLocalPerm('delete')" class="text-center">
                     <p-button
-                      *appHasPermission="'ticket:edit'"
+                      *ngIf="hasLocalPerm('edit')"
                       icon="pi pi-pencil"
                       [rounded]="true"
                       [text]="true"
@@ -258,7 +260,7 @@
                       (onClick)="editarTicket(ticket)"
                     ></p-button>
                     <p-button
-                      *appHasPermission="'ticket:delete'"
+                      *ngIf="hasLocalPerm('delete')"
                       icon="pi pi-trash"
                       [rounded]="true"
                       [text]="true"
@@ -341,6 +343,7 @@
           </div>
         </p-tabpanel>
 
+        <!--Apartado de Integrantes-->
         <p-tabpanel value="2" *appHasPermission="'group-detail:view'">
           <p-table
             #dtIntegrantes
@@ -349,6 +352,7 @@
             [rows]="5"
             [globalFilterFields]="['email']"
             [rowHover]="true"
+            dataKey="email"
           >
             <ng-template pTemplate="caption">
               <div class="flex justify-between mb-2">
@@ -402,7 +406,12 @@
                 <th pSortableColumn="email">
                   Correo Electrónico <p-sortIcon field="email"></p-sortIcon>
                 </th>
-                <th *appHasPermission="'group-detail:delete'" class="text-right w-32">Acciones</th>
+                <th
+                  *appHasPermission="['group-detail:edit', 'group-detail:delete']"
+                  class="text-right w-32"
+                >
+                  Acciones
+                </th>
               </tr>
             </ng-template>
             <ng-template pTemplate="body" let-item>
@@ -410,7 +419,20 @@
                 <td class="font-medium text-slate-700">
                   <i class="pi pi-user mr-2 text-slate-400"></i> {{ item.email }}
                 </td>
-                <td *appHasPermission="'group-detail:delete'" class="text-right">
+                <td
+                  *appHasPermission="['group-detail:edit', 'group-detail:delete']"
+                  class="text-right"
+                >
+                  <p-button
+                    *appHasPermission="'group-detail:edit'"
+                    icon="pi pi-shield"
+                    [rounded]="true"
+                    [text]="true"
+                    severity="info"
+                    pTooltip="Permisos de Tickets"
+                    (onClick)="abrirModalPermisos(item.email)"
+                  ></p-button>
+
                   <p-button
                     *appHasPermission="'group-detail:delete'"
                     icon="pi pi-trash"
@@ -436,144 +458,277 @@
     </p-tabs>
   </div>
 
+  <!--Modal de Tickets-->
   <p-dialog
     [(visible)]="ticketDialog"
-    [style]="{ width: '650px' }"
+    [style]="{ width: '750px' }"
     [header]="
       !isEditTicketMode ? 'Nuevo Ticket' : canEditTicket ? 'Editar Ticket' : 'Detalles del Ticket'
     "
     [modal]="true"
     styleClass="p-fluid"
     [maximizable]="true"
+    [contentStyle]="{ 'overflow-y': 'visible' }"
   >
     <ng-template pTemplate="content">
-      <form [formGroup]="ticketForm" class="flex flex-col gap-5 p-2">
-        <div class="flex flex-col gap-2">
-          <label class="font-semibold text-slate-700">Título del Ticket *</label>
-          <input
-            type="text"
-            pInputText
-            formControlName="titulo"
-            placeholder="Breve descripción de la tarea"
-          />
-          <small class="text-red-500" *ngIf="tf['titulo'].invalid && tf['titulo'].touched"
-            >El título es requerido.</small
-          >
-        </div>
+      <form [formGroup]="ticketForm">
+        <p-tabs [(value)]="activeTicketTab">
+          <p-tablist>
+            <p-tab value="0">Detalles</p-tab>
+            <p-tab value="1" *ngIf="isEditTicketMode">Comentarios</p-tab>
+            <p-tab value="2" *ngIf="isEditTicketMode">Historial</p-tab>
+          </p-tablist>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div class="flex flex-col gap-2">
-            <label class="font-semibold text-slate-700">Asignado a</label>
-            <p-autoComplete
-              [suggestions]="filteredIntegrantes"
-              (completeMethod)="buscarIntegrante($event)"
-              [dropdown]="true"
-              formControlName="asignadoA"
-              placeholder="Sin Asignar"
-              appendTo="body"
-            ></p-autoComplete>
-          </div>
+          <p-tabpanels>
+            <p-tabpanel value="0">
+              <div class="flex flex-col gap-5 pt-4">
+                <div class="flex flex-col gap-2">
+                  <label class="font-semibold text-slate-700">Título del Ticket *</label>
+                  <input
+                    type="text"
+                    pInputText
+                    formControlName="titulo"
+                    placeholder="Breve descripción de la tarea"
+                  />
+                  <small class="text-red-500" *ngIf="tf['titulo'].invalid && tf['titulo'].touched"
+                    >El título es requerido.</small
+                  >
+                </div>
 
-          <div class="flex flex-col gap-2">
-            <label class="font-semibold text-slate-700">Estado Actual *</label>
-            <p-autoComplete
-              [suggestions]="filteredEstados"
-              (completeMethod)="buscarEstado($event)"
-              [dropdown]="true"
-              formControlName="estado"
-              placeholder="Selecciona el estado"
-              appendTo="body"
-            ></p-autoComplete>
-            <small class="text-red-500" *ngIf="tf['estado'].invalid && tf['estado'].touched"
-              >El estado es requerido.</small
-            >
-          </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div class="flex flex-col gap-2">
+                    <label class="font-semibold text-slate-700">Asignado a</label>
+                    <p-autoComplete
+                      [suggestions]="filteredIntegrantes"
+                      (completeMethod)="buscarIntegrante($event)"
+                      [dropdown]="true"
+                      formControlName="asignadoA"
+                      placeholder="Sin Asignar"
+                      appendTo="body"
+                    ></p-autoComplete>
+                  </div>
+                  <div class="flex flex-col gap-2">
+                    <label class="font-semibold text-slate-700">Estado Actual *</label>
+                    <p-autoComplete
+                      [suggestions]="filteredEstados"
+                      (completeMethod)="buscarEstado($event)"
+                      [dropdown]="true"
+                      formControlName="estado"
+                      placeholder="Selecciona el estado"
+                      appendTo="body"
+                    ></p-autoComplete>
+                    <small class="text-red-500" *ngIf="tf['estado'].invalid && tf['estado'].touched"
+                      >El estado es requerido.</small
+                    >
+                  </div>
+                  <div class="flex flex-col gap-2">
+                    <label class="font-semibold text-slate-700">Prioridad *</label>
+                    <p-autoComplete
+                      [suggestions]="filteredPrioridades"
+                      (completeMethod)="buscarPrioridad($event)"
+                      [dropdown]="true"
+                      formControlName="prioridad"
+                      placeholder="Nivel de prioridad"
+                      appendTo="body"
+                    ></p-autoComplete>
+                    <small
+                      class="text-red-500"
+                      *ngIf="tf['prioridad'].invalid && tf['prioridad'].touched"
+                      >La prioridad es requerida.</small
+                    >
+                  </div>
+                  <div class="flex flex-col gap-2">
+                    <label class="font-semibold text-slate-700">Fecha Límite *</label>
+                    <p-datepicker
+                      formControlName="fechaLimite"
+                      [showIcon]="true"
+                      [minDate]="minDate"
+                      appendTo="body"
+                      [fluid]="true"
+                      dateFormat="dd/mm/yy"
+                    ></p-datepicker>
+                    <small
+                      class="text-red-500"
+                      *ngIf="tf['fechaLimite'].invalid && tf['fechaLimite'].touched"
+                      >La fecha límite es requerida.</small
+                    >
+                  </div>
+                </div>
 
-          <div class="flex flex-col gap-2">
-            <label class="font-semibold text-slate-700">Prioridad *</label>
-            <p-autoComplete
-              [suggestions]="filteredPrioridades"
-              (completeMethod)="buscarPrioridad($event)"
-              [dropdown]="true"
-              formControlName="prioridad"
-              placeholder="Nivel de prioridad"
-              appendTo="body"
-            ></p-autoComplete>
-            <small class="text-red-500" *ngIf="tf['prioridad'].invalid && tf['prioridad'].touched"
-              >La prioridad es requerida.</small
-            >
-          </div>
+                <div class="flex flex-col gap-2">
+                  <label class="font-semibold text-slate-700">Descripción completa *</label>
+                  <textarea
+                    pInputTextarea
+                    formControlName="descripcion"
+                    rows="4"
+                    class="resize-none"
+                  ></textarea>
+                  <small
+                    class="text-red-500"
+                    *ngIf="tf['descripcion'].invalid && tf['descripcion'].touched"
+                    >La descripción es requerida.</small
+                  >
+                </div>
+              </div>
+            </p-tabpanel>
 
-          <div class="flex flex-col gap-2">
-            <label class="font-semibold text-slate-700">Fecha Límite *</label>
-            <p-datepicker
-              formControlName="fechaLimite"
-              [showIcon]="true"
-              [minDate]="minDate"
-              appendTo="body"
-              dateFormat="dd/mm/yy"
-            ></p-datepicker>
-            <small
-              class="text-red-500"
-              *ngIf="tf['fechaLimite'].invalid && tf['fechaLimite'].touched"
-              >La fecha límite es requerida.</small
-            >
-          </div>
-        </div>
+            <p-tabpanel value="1" *ngIf="isEditTicketMode">
+              <div class="flex flex-col gap-4 pt-4 h-[400px]">
+                <div
+                  class="flex-1 overflow-y-auto bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col gap-3 custom-scrollbar"
+                >
+                  <div
+                    *ngIf="!currentTicket?.comentariosList?.length"
+                    class="text-center text-slate-400 py-8 flex flex-col items-center gap-2 m-auto"
+                  >
+                    <i class="pi pi-comments text-4xl"></i>
+                    <span>No hay comentarios aún. ¡Sé el primero en aportar!</span>
+                  </div>
 
-        <div class="flex flex-col gap-2">
-          <label class="font-semibold text-slate-700">Descripción completa *</label>
-          <textarea
-            pInputTextarea
-            formControlName="descripcion"
-            rows="4"
-            class="resize-none"
-          ></textarea>
-          <small class="text-red-500" *ngIf="tf['descripcion'].invalid && tf['descripcion'].touched"
-            >La descripción es requerida.</small
-          >
-        </div>
+                  <div
+                    *ngFor="let comment of currentTicket?.comentariosList"
+                    class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 flex flex-col gap-1"
+                  >
+                    <div
+                      class="flex justify-between items-center border-b border-slate-50 pb-1 mb-1"
+                    >
+                      <span class="font-bold text-sm text-[var(--p-primary-600)]"
+                        ><i class="pi pi-user mr-1 text-xs"></i>{{ comment.autor }}</span
+                      >
+                      <span class="text-xs text-slate-400">{{
+                        comment.fecha | date: 'short'
+                      }}</span>
+                    </div>
+                    <p class="text-sm text-slate-700 m-0 whitespace-pre-wrap">
+                      {{ comment.texto }}
+                    </p>
+                  </div>
+                </div>
 
-        <div class="flex flex-col gap-2">
-          <label class="font-semibold text-slate-700">Comentarios</label>
-          <textarea
-            pInputTextarea
-            formControlName="comentarios"
-            rows="2"
-            class="resize-none"
-            placeholder="Notas, dudas o actualizaciones..."
-          ></textarea>
-        </div>
+                <div class="flex flex-col gap-2" *ngIf="canEditTicket">
+                  <textarea
+                    pInputTextarea
+                    formControlName="nuevoComentario"
+                    rows="2"
+                    class="resize-none"
+                    placeholder="Escribe una actualización o nota..."
+                  ></textarea>
+                  <div class="flex justify-end">
+                    <p-button
+                      label="Enviar"
+                      icon="pi pi-send"
+                      size="small"
+                      (onClick)="agregarComentario()"
+                      [disabled]="!ticketForm.get('nuevoComentario')?.value?.trim()"
+                    ></p-button>
+                  </div>
+                </div>
+              </div>
+            </p-tabpanel>
 
-        <div
-          *ngIf="isEditTicketMode && ticketForm.getRawValue().historial?.length > 0"
-          class="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2"
-        >
-          <label class="font-semibold text-slate-700 text-sm flex items-center gap-2 mb-2"
-            ><i class="pi pi-history"></i> Historial de Cambios</label
-          >
-          <ul class="text-xs text-slate-500 pl-4 m-0 space-y-1">
-            <li *ngFor="let log of ticketForm.getRawValue().historial">{{ log }}</li>
-          </ul>
-        </div>
+            <p-tabpanel value="2" *ngIf="isEditTicketMode">
+              <div class="flex flex-col gap-4 pt-4 h-[400px]">
+                <div
+                  class="flex-1 overflow-y-auto bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col gap-3 custom-scrollbar"
+                >
+                  <div
+                    *ngIf="!currentTicket?.historial?.length"
+                    class="text-center text-slate-400 py-8 flex flex-col items-center gap-2 m-auto"
+                  >
+                    <i class="pi pi-history text-4xl"></i>
+                    <span>No hay historial de cambios registrado.</span>
+                  </div>
+
+                  <div
+                    *ngFor="let log of currentTicket?.historial"
+                    class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 flex flex-col gap-1"
+                  >
+                    <div
+                      class="flex justify-between items-center border-b border-slate-50 pb-1 mb-1"
+                    >
+                      <div class="flex items-center gap-2">
+                        <i class="pi pi-history text-xs text-[var(--p-primary-600)]"></i>
+                        <span class="font-bold text-sm text-[var(--p-primary-600)]"
+                          >Registro de sistema</span
+                        >
+                      </div>
+                      <span class="text-xs text-slate-400">{{ log.fecha | date: 'short' }}</span>
+                    </div>
+                    <p class="text-sm text-slate-700 m-0 whitespace-pre-wrap">
+                      {{ log.descripcion }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
       </form>
     </ng-template>
 
     <ng-template pTemplate="footer">
-      <p-button
-        [label]="canEditTicket ? 'Cancelar' : 'Cerrar'"
-        [icon]="canEditTicket ? 'pi pi-times' : 'pi pi-check'"
-        severity="secondary"
-        (onClick)="ticketDialog = false"
-      ></p-button>
+      <div *ngIf="activeTicketTab === '0'" class="flex justify-end gap-2 w-full">
+        <p-button
+          [label]="canEditTicket ? 'Cancelar' : 'Cerrar'"
+          [icon]="canEditTicket ? 'pi pi-times' : 'pi pi-check'"
+          severity="secondary"
+          (onClick)="ticketDialog = false"
+        ></p-button>
+        <p-button
+          *ngIf="canEditTicket"
+          label="Guardar Ticket"
+          icon="pi pi-save"
+          (onClick)="guardarTicket()"
+        ></p-button>
+      </div>
+    </ng-template>
+  </p-dialog>
 
+  <!--Modal de Permisos de Integrantes-->
+  <p-dialog
+    [(visible)]="permissionsDialog"
+    [style]="{ width: '450px' }"
+    header="Permisos de Tickets del Grupo"
+    [modal]="true"
+  >
+    <ng-template pTemplate="content">
+      <div class="flex flex-col gap-4 p-2 mt-2">
+        <p class="text-slate-600 m-0 leading-relaxed">
+          Matriz de acceso para
+          <span class="font-bold text-slate-800">{{ selectedMemberEmail }}</span> sobre los
+          tickets de este grupo:
+        </p>
+
+        <div
+          class="flex flex-col gap-4 mt-2 bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm"
+        >
+          <div *ngFor="let perm of ticketPermissions" class="flex items-center gap-3">
+            <p-checkbox
+              [value]="perm.key"
+              [(ngModel)]="selectedMemberPermissions"
+              [inputId]="perm.key"
+              (onChange)="onLocalPermissionChange($event, perm.key)"
+            ></p-checkbox>
+            <label [for]="perm.key" class="text-slate-700 font-medium cursor-pointer select-none">{{
+              perm.label
+            }}</label>
+          </div>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template pTemplate="footer">
       <p-button
-        *ngIf="canEditTicket"
-        label="Guardar Ticket"
+        label="Cancelar"
+        icon="pi pi-times"
+        severity="secondary"
+        (onClick)="permissionsDialog = false"
+      ></p-button>
+      <p-button
+        label="Guardar Permisos"
         icon="pi pi-check"
-        (onClick)="guardarTicket()"
-      >
-      </p-button>
+        (onClick)="guardarPermisosLocales()"
+      ></p-button>
     </ng-template>
   </p-dialog>
 </app-main-layout>
