@@ -1,0 +1,81 @@
+<p-toast></p-toast>
+
+<div
+  class="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 bg-[#f8fafc]"
+>
+  <a
+    routerLink="/"
+    class="flex items-center gap-2 mb-8 hover:opacity-80 transition-opacity cursor-pointer no-underline"
+  >
+    <i class="pi pi-th-large text-4xl text-[var(--p-primary-color)]"></i>
+    <span class="font-extrabold text-3xl tracking-tight text-slate-900"
+      >Nexos<span class="text-[var(--p-primary-color)]">ERP</span></span
+    >
+  </a>
+
+  <div class="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-100 p-8 sm:p-10">
+    <div *ngIf="!emailSent">
+      <div class="text-center mb-10">
+        <h2 class="text-3xl font-bold text-slate-950">Recuperar acceso</h2>
+        <p class="text-base text-slate-600 mt-3 leading-relaxed">
+          Ingresa tu correo electrónico y te enviaremos las instrucciones para restablecer tu
+          contraseña.
+        </p>
+      </div>
+
+      <form [formGroup]="recoverForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-6">
+        <div class="flex flex-col gap-2.5">
+          <label for="email" class="font-semibold text-slate-800">Correo Electrónico</label>
+          <input
+            pInputText
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="Correo Electrónico"
+            class="w-full p-inputtext-lg"
+          />
+          <small class="text-red-500 font-medium" *ngIf="f['email'].invalid && f['email'].touched">
+            Por favor, ingresa un correo electrónico válido.
+          </small>
+        </div>
+
+        <div class="mt-4">
+          <p-button
+            label="Enviar instrucciones"
+            type="submit"
+            [disabled]="recoverForm.invalid"
+            styleClass="w-full"
+            size="large"
+          ></p-button>
+        </div>
+      </form>
+    </div>
+
+    <div *ngIf="emailSent" class="text-center py-6">
+      <div
+        class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-lg"
+      >
+        <i class="pi pi-check text-4xl text-green-600 font-bold"></i>
+      </div>
+      <h2 class="text-3xl font-bold text-slate-950 mb-3">¡Revisa tu correo!</h2>
+      <p class="text-base text-slate-600 mb-8 leading-relaxed">
+        Hemos enviado un enlace seguro de recuperación a
+        <strong class="text-slate-800">{{ recoverForm.value.email }}</strong
+        >. Si no lo recibes en unos minutos, revisa tu carpeta de spam.
+      </p>
+    </div>
+
+    <p-divider align="center" styleClass="my-8">
+      <span class="text-slate-400 text-sm bg-white px-2">o</span>
+    </p-divider>
+
+    <div class="text-center">
+      <a
+        routerLink="/auth/login"
+        class="text-sm font-semibold text-[var(--p-primary-600)] hover:text-[var(--p-primary-700)] no-underline flex items-center justify-center gap-2 transition-colors"
+      >
+        <i class="pi pi-arrow-left text-xs"></i> Volver al inicio de sesión
+      </a>
+    </div>
+  </div>
+</div>

@@ -24,6 +24,8 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { Router } from '@angular/router';
 import { HasPermission } from '../../core/directives/permission/has-permission';
+import { PasswordModule } from 'primeng/password';
+import { DialogModule } from 'primeng/dialog';
 
 function ageValidator(control: AbstractControl): ValidationErrors | null {
   if (!control.value) return null;
@@ -35,6 +37,12 @@ function ageValidator(control: AbstractControl): ValidationErrors | null {
     age--;
   }
   return age >= 18 ? null : { minor: true };
+}
+
+function passwordMatchValidator(group: AbstractControl): ValidationErrors | null {
+  const pass = group.get('newPassword')?.value;
+  const confirm = group.get('confirmPassword')?.value;
+  return pass === confirm ? null : { mismatch: true };
 }
 
 @Component({
@@ -55,6 +63,8 @@ function ageValidator(control: AbstractControl): ValidationErrors | null {
     HasPermission,
     TableModule,
     TagModule,
+    PasswordModule,
+    DialogModule,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './user.html',
@@ -76,6 +86,9 @@ export class User implements OnInit {
   misTickets: any[] = [];
   misEstadisticas: any = {};
 
+  passwordDialog: boolean = false;
+  passwordForm!: FormGroup;
+
   ngOnInit() {
     this.profileForm = this.fb.group({
       usuario: [{ value: this.userData?.usuario, disabled: true }],
@@ -93,6 +106,57 @@ export class User implements OnInit {
     });
 
     this.cargarDatosLaborales();
+
+    this.passwordForm = this.fb.group(
+      {
+        oldPassword: ['', Validators.required],
+        newPassword: [
+          '',
+          [
+            Validators.required,
+            Validators.minLength(10),
+            Validators.pattern('^.*[@$!%*?&#/\\-+=<>].*$'),
+          ],
+        ],
+        confirmPassword: ['', Validators.required],
+      },
+      { validators: passwordMatchValidator },
+    );
+  }
+
+  abrirModalPassword() {
+    this.passwordForm.reset();
+    this.passwordDialog = true;
+  }
+
+  cambiarPassword() {
+    if (this.passwordForm.invalid) {
+      this.passwordForm.markAllAsTouched();
+      return;
+    }
+
+    const { oldPassword, newPassword } = this.passwordForm.value;
+
+    if (!this.authService.validatePassword(this.userData.usuario, oldPassword)) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'La contraseña actual es incorrecta.',
+      });
+      return;
+    }
+
+    this.authService.updatePassword(this.userData.usuario, newPassword);
+    this.passwordDialog = false;
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Éxito',
+      detail: 'Tu contraseña ha sido actualizada.',
+    });
+  }
+
+  get pf() {
+    return this.passwordForm.controls;
   }
 
   cargarDatosLaborales() {

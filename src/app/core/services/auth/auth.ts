@@ -176,4 +176,22 @@ export class AuthService {
   getAllUsers(): any[] {
     return [...this.users];
   }
+
+  validatePassword(usuario: string, passwordAComprobar: string): boolean {
+    const user = this.users.find((u) => u.usuario === usuario);
+    return user ? user.password === passwordAComprobar : false;
+  }
+
+  updatePassword(usuario: string, nuevaPassword: string): void {
+    const index = this.users.findIndex((u) => u.usuario === usuario);
+    if (index !== -1) {
+      this.users[index].password = nuevaPassword;
+      this.saveUsers();
+
+      if (this.currentUser && this.currentUser.usuario === usuario) {
+        this.currentUser.password = nuevaPassword;
+        this.saveCurrentUser();
+      }
+    }
+  }
 }

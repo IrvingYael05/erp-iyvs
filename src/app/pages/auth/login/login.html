@@ -1,22 +1,33 @@
-<p-toast></p-toast> <div class="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 bg-[#f8fafc]">
-  
-  <a routerLink="/" class="flex items-center gap-2 mb-8 hover:opacity-80 transition-opacity cursor-pointer no-underline">
+<p-toast></p-toast>
+<div
+  class="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 bg-[#f8fafc]"
+>
+  <a
+    routerLink="/"
+    class="flex items-center gap-2 mb-8 hover:opacity-80 transition-opacity cursor-pointer no-underline"
+  >
     <i class="pi pi-th-large text-4xl text-[var(--p-primary-color)]"></i>
-    <span class="font-extrabold text-3xl tracking-tight text-slate-900">Nexos<span class="text-[var(--p-primary-color)]">ERP</span></span>
+    <span class="font-extrabold text-3xl tracking-tight text-slate-900"
+      >Nexos<span class="text-[var(--p-primary-color)]">ERP</span></span
+    >
   </a>
 
   <div class="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-100 p-8 sm:p-10">
-    
     <div class="text-center mb-8">
       <h2 class="text-2xl font-bold text-slate-900">Bienvenido de nuevo</h2>
       <p class="text-sm text-slate-500 mt-2">Ingresa tus credenciales para acceder al sistema</p>
     </div>
 
     <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-6">
-      
       <div class="flex flex-col gap-2">
         <label for="usuario" class="text-sm font-semibold text-slate-700">Usuario</label>
-        <input pInputText id="usuario" formControlName="usuario" placeholder="Ej. admin" class="w-full" />
+        <input
+          pInputText
+          id="usuario"
+          formControlName="usuario"
+          placeholder="Ej. admin"
+          class="w-full"
+        />
         @if (f['usuario'].invalid && (f['usuario'].dirty || f['usuario'].touched)) {
           <small class="text-red-500">El usuario es requerido.</small>
         }
@@ -24,16 +35,37 @@
 
       <div class="flex flex-col gap-2">
         <label for="password" class="text-sm font-semibold text-slate-700">Contraseña</label>
-        <p-password id="password" formControlName="password" [toggleMask]="true" [feedback]="false" placeholder="Ingresa tu contraseña" styleClass="w-full" [inputStyle]="{'width': '100%'}"></p-password>
+        <p-password
+          id="password"
+          formControlName="password"
+          [toggleMask]="true"
+          [feedback]="false"
+          placeholder="Ingresa tu contraseña"
+          styleClass="w-full"
+          [inputStyle]="{ width: '100%' }"
+        ></p-password>
         @if (f['password'].invalid && (f['password'].dirty || f['password'].touched)) {
           <small class="text-red-500">La contraseña es requerida.</small>
         }
+        <div class="flex justify-end mt-1">
+          <a
+            routerLink="/auth/recover"
+            class="text-sm font-semibold text-[var(--p-primary-600)] hover:text-[var(--p-primary-700)] no-underline"
+          >
+            ¿Olvidaste tu contraseña?
+          </a>
+        </div>
       </div>
 
       <div class="mt-2">
-        <p-button label="Ingresar al sistema" type="submit" [disabled]="loginForm.invalid" styleClass="w-full" size="large"></p-button>
+        <p-button
+          label="Ingresar al sistema"
+          type="submit"
+          [disabled]="loginForm.invalid"
+          styleClass="w-full"
+          size="large"
+        ></p-button>
       </div>
-
     </form>
 
     <p-divider align="center" styleClass="my-8">
@@ -42,10 +74,13 @@
 
     <div class="text-center">
       <p class="text-sm text-slate-600">
-        ¿No tienes una cuenta? 
-        <a routerLink="/auth/register" class="font-bold text-[var(--p-primary-600)] hover:text-[var(--p-primary-700)] transition-colors no-underline">Regístrate aquí</a>
+        ¿No tienes una cuenta?
+        <a
+          routerLink="/auth/register"
+          class="font-bold text-[var(--p-primary-600)] hover:text-[var(--p-primary-700)] transition-colors no-underline"
+          >Regístrate aquí</a
+        >
       </p>
     </div>
-
   </div>
 </div>

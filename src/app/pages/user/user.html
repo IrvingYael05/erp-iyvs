@@ -167,6 +167,15 @@
 
         <div class="flex justify-end mt-8 gap-4">
           <p-button
+            label="Cambiar Contraseña"
+            icon="pi pi-key"
+            severity="info"
+            (onClick)="abrirModalPassword()"
+            type="button"
+          ></p-button>
+        </div>
+        <div class="flex justify-end mt-8 gap-4">
+          <p-button
             *appHasPermission="'user:delete'"
             label="Desactivar Cuenta"
             icon="pi pi-user-minus"
@@ -183,5 +192,66 @@
         </div>
       </form>
     </p-card>
+
+    <p-dialog
+      [(visible)]="passwordDialog"
+      [style]="{ width: '450px' }"
+      header="Cambiar Contraseña"
+      [modal]="true"
+    >
+      <form [formGroup]="passwordForm" class="flex flex-col gap-4 mt-4">
+        <div class="flex flex-col gap-2">
+          <label class="font-semibold text-slate-700">Contraseña Actual</label>
+          <p-password
+            formControlName="oldPassword"
+            [toggleMask]="true"
+            [feedback]="false"
+            styleClass="w-full"
+            [inputStyle]="{ width: '100%' }"
+          ></p-password>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="font-semibold text-slate-700">Nueva Contraseña</label>
+          <p-password
+            formControlName="newPassword"
+            [toggleMask]="true"
+            styleClass="w-full"
+            [inputStyle]="{ width: '100%' }"
+          ></p-password>
+          <small
+            class="text-red-500"
+            *ngIf="pf['newPassword'].invalid && pf['newPassword'].touched"
+          >
+            Mín. 10 caracteres y al menos un símbolo especial.
+          </small>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="font-semibold text-slate-700">Confirmar Nueva Contraseña</label>
+          <p-password
+            formControlName="confirmPassword"
+            [toggleMask]="true"
+            [feedback]="false"
+            styleClass="w-full"
+            [inputStyle]="{ width: '100%' }"
+          ></p-password>
+          <small
+            class="text-red-500"
+            *ngIf="passwordForm.hasError('mismatch') && pf['confirmPassword'].touched"
+          >
+            Las contraseñas no coinciden.
+          </small>
+        </div>
+      </form>
+
+      <ng-template pTemplate="footer">
+        <p-button
+          label="Cancelar"
+          icon="pi pi-times"
+          severity="secondary"
+          (onClick)="passwordDialog = false"
+        ></p-button>
+        <p-button label="Actualizar" icon="pi pi-check" (onClick)="cambiarPassword()"></p-button>
+      </ng-template>
+    </p-dialog>
   </div>
 </app-main-layout>

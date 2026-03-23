@@ -50,6 +50,11 @@ export const routes: Routes = [
     data: { permission: 'user-manage:view' },
   },
   {
+    path: 'auth/recover',
+    loadComponent: () => import('./pages/auth/recover/recover').then((c) => c.Recover),
+    canActivate: [guestGuard],
+  },
+  {
     path: '**',
     loadComponent: () => import('./pages/not-found/not-found').then((c) => c.NotFound),
   },
