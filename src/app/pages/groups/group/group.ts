@@ -13,7 +13,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToolbarModule } from 'primeng/toolbar';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { HasPermission } from '../../../core/directives/permission/has-permission';
-import { AuthService } from '../../../core/services/auth/auth';
+import { UsersService } from '../../../core/services/users/users';
 import { GroupService } from '../../../core/services/group/group';
 import { Router } from '@angular/router';
 
@@ -43,7 +43,7 @@ export class Group implements OnInit {
   private fb = inject(FormBuilder);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
-  private authService = inject(AuthService);
+  private UsersService = inject(UsersService);
   private groupService = inject(GroupService);
   private router = inject(Router);
 
@@ -132,7 +132,7 @@ export class Group implements OnInit {
     }
 
     const formValue = this.grupoForm.value;
-    const currentUser = this.authService.getCurrentUser();
+    const currentUser = this.UsersService.getCurrentUser();
 
     if (this.isEditMode) {
       const originalGroup = this.groupService.getGroupById(formValue.id);

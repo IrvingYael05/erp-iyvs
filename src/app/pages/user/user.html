@@ -106,9 +106,10 @@
         class="flex flex-col md:flex-row items-center gap-6 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100"
       >
         <p-avatar
-          [label]="(userData?.usuario?.charAt(0) | uppercase) || 'U'"
-          styleClass="bg-[var(--p-primary-100)] text-[var(--p-primary-600)] text-4xl font-bold"
+          [label]="(userData?.nombreCompleto?.charAt(0) | uppercase) || 'U'"
+          styleClass="bg-[var(--p-primary-100)] text-[var(--p-primary-600)] font-bold"
           shape="circle"
+          size="xlarge"
           [style]="{ width: '90px', height: '90px' }"
         >
         </p-avatar>
@@ -124,15 +125,6 @@
       <form [formGroup]="profileForm" (ngSubmit)="onUpdateProfile()" class="p-4 pt-0">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="flex flex-col gap-2">
-            <label class="text-sm font-semibold text-slate-700">Nombre de Usuario</label>
-            <input pInputText formControlName="usuario" class="w-full bg-slate-100 opacity-70" />
-          </div>
-          <div class="flex flex-col gap-2">
-            <label class="text-sm font-semibold text-slate-700">Correo Electrónico</label>
-            <input pInputText formControlName="email" class="w-full bg-slate-100 opacity-70" />
-          </div>
-
-          <div class="flex flex-col gap-2 md:col-span-2">
             <label class="text-sm font-semibold text-slate-700">Nombre Completo</label>
             <input pInputText formControlName="nombreCompleto" class="w-full" />
             <small
@@ -140,6 +132,10 @@
               *ngIf="f['nombreCompleto'].invalid && f['nombreCompleto'].touched"
               >Requerido.</small
             >
+          </div>
+          <div class="flex flex-col gap-2">
+            <label class="text-sm font-semibold text-slate-700">Correo Electrónico</label>
+            <input pInputText formControlName="email" class="w-full bg-slate-100 opacity-70" />
           </div>
 
           <div class="flex flex-col gap-2">
@@ -167,6 +163,7 @@
 
         <div class="flex justify-end mt-8 gap-4">
           <p-button
+            *appHasPermission="'user:edit'"
             label="Cambiar Contraseña"
             icon="pi pi-key"
             severity="info"
@@ -180,6 +177,7 @@
             label="Desactivar Cuenta"
             icon="pi pi-user-minus"
             severity="danger"
+            [loading]="isDeleteLoading"
             (onClick)="deactivateAccount()"
           ></p-button>
           <p-button
@@ -187,6 +185,7 @@
             label="Guardar Cambios"
             icon="pi pi-save"
             type="submit"
+            [loading]="isProfileLoading"
             [disabled]="profileForm.invalid || profileForm.pristine"
           ></p-button>
         </div>
@@ -250,7 +249,13 @@
           severity="secondary"
           (onClick)="passwordDialog = false"
         ></p-button>
-        <p-button label="Actualizar" icon="pi pi-check" (onClick)="cambiarPassword()"></p-button>
+        <p-button
+          label="Actualizar"
+          icon="pi pi-check"
+          [loading]="isPasswordLoading"
+          [disabled]="passwordForm.invalid"
+          (onClick)="cambiarPassword()"
+        ></p-button>
       </ng-template>
     </p-dialog>
   </div>

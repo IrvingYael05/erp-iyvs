@@ -1,10 +1,13 @@
 import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
 import { definePreset } from '@primeuix/themes';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { MessageService } from 'primeng/api';
 
 const OrangePreset = definePreset(Aura, {
   semantic: {
@@ -29,6 +32,8 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideRouter(routes),
     provideAnimationsAsync(),
+    provideHttpClient(withInterceptors([authInterceptor])),
+    MessageService,
     providePrimeNG({
       theme: {
         preset: OrangePreset,

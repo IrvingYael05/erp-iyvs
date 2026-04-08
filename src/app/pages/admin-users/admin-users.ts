@@ -1,15 +1,13 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MainLayout } from '../../layout/main-layout/main-layout';
-import { AuthService } from '../../core/services/auth/auth';
+import { UsersService } from '../../core/services/users/users';
 import {
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
   Validators,
   FormsModule,
-  AbstractControl,
-  ValidationErrors,
 } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -22,6 +20,7 @@ import { TagModule } from 'primeng/tag';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { HasPermission } from '../../core/directives/permission/has-permission';
+import { TableLazyLoadEvent } from 'primeng/table';
 
 @Component({
   selector: 'app-admin-users',
@@ -46,10 +45,11 @@ import { HasPermission } from '../../core/directives/permission/has-permission';
   templateUrl: './admin-users.html',
 })
 export class AdminUsers implements OnInit {
-  private authService = inject(AuthService);
+  private usersService = inject(UsersService);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   users: any[] = [];
 
@@ -60,7 +60,6 @@ export class AdminUsers implements OnInit {
   selectedPermissions: string[] = [];
 
   userForm: FormGroup = this.fb.group({
-    usuario: ['', [Validators.required, Validators.minLength(4)]],
     email: ['', [Validators.required, Validators.email]],
     nombreCompleto: ['', [Validators.required, Validators.minLength(5)]],
     password: [
@@ -72,6 +71,11 @@ export class AdminUsers implements OnInit {
       ],
     ],
   });
+
+  isLoading = true;
+  isSaving = false;
+
+  totalRecords = 0;
 
   modules = [
     { key: 'group', label: 'Grupos' },
@@ -87,16 +91,44 @@ export class AdminUsers implements OnInit {
     { key: 'delete', label: 'Eliminar' },
   ];
 
-  ngOnInit() {
-    this.loadUsers();
-  }
+  ngOnInit() {}
 
-  loadUsers() {
-    this.users = this.authService.getAllUsers();
-  }
+  loadUsers(event?: TableLazyLoadEvent) {
+    this.isLoading = true;
 
-  isSuperAdmin(user: any): boolean {
-    return user.permissions?.some((p: string) => p.startsWith('user-manage:'));
+    let page = 1;
+    let limit = 5;
+    let search = '';
+
+    if (event) {
+      limit = event.rows || 5;
+      page = (event.first || 0) / limit + 1;
+
+      if (event.globalFilter) {
+        search = event.globalFilter as string;
+      }
+    }
+
+    this.usersService.getUsers(page, limit, search).subscribe({
+      next: (res) => {
+        if (res.data && res.data[0]) {
+          const payload = res.data[0];
+          this.users = Array.isArray(payload.users) ? payload.users : [];
+          this.totalRecords = payload.totalRecords || this.users.length;
+        } else {
+          this.users = [];
+          this.totalRecords = 0;
+        }
+      },
+      error: (err) => {
+        console.error('Error al cargar usuarios:', err);
+        this.users = [];
+      },
+      complete: () => {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   openNewUser() {
@@ -110,65 +142,68 @@ export class AdminUsers implements OnInit {
       return;
     }
 
-    const newUser = this.userForm.value;
+    if (this.userForm.valid) {
+      this.isSaving = true;
 
-    if (this.authService.userExists(newUser.email)) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'El correo electrónico ya está registrado.',
-      });
-      return;
-    }
-    if (this.users.some((u) => u.usuario.toLowerCase() === newUser.usuario.toLowerCase())) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'El nombre de usuario ya está en uso.',
-      });
-      return;
-    }
+      this.usersService.createUser(this.userForm.value).subscribe({
+        next: (res) => {
+          this.isSaving = false;
+          this.userDialog = false;
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Usuario Creado',
+            detail: res.data[0].message || 'Usuario registrado correctamente.',
+          });
 
-    this.authService.addUser(newUser);
-    this.loadUsers();
-    this.userDialog = false;
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Éxito',
-      detail: 'Usuario creado correctamente',
-    });
+          this.loadUsers({ first: 0, rows: 5 });
+        },
+        error: (err) => {
+          this.isSaving = false;
+        },
+      });
+    } else {
+      this.userForm.markAllAsTouched();
+    }
   }
 
   deleteUser(user: any) {
+    if (user.email === this.usersService.getCurrentUser()?.email) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Acción Denegada',
+        detail: 'No puedes suspender tu propia cuenta.',
+      });
+      return;
+    }
+
     this.confirmationService.confirm({
-      message: `¿Estás seguro de eliminar permanentemente al usuario ${user.usuario}?`,
-      header: 'Confirmar Eliminación',
+      message: `¿Estás seguro de que deseas suspender el acceso a ${user.nombreCompleto}?`,
+      header: 'Confirmar Suspensión',
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Sí, eliminar',
-      rejectLabel: 'Cancelar',
+      acceptLabel: 'Suspender',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        if (this.authService.getCurrentUser()?.usuario === user.usuario) {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Acción Denegada',
-            detail: 'No puedes eliminar tu propia cuenta desde aquí.',
-          });
-          return;
-        }
-        this.authService.deleteUser(user.usuario);
-        this.loadUsers();
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Usuario eliminado',
+        this.isLoading = true;
+        this.usersService.deleteUser(user.id).subscribe({
+          next: (res) => {
+            this.isLoading = false;
+            this.messageService.add({
+              severity: 'warn',
+              summary: 'Usuario Suspendido',
+              detail: res.data[0].message || 'El acceso ha sido revocado.',
+            });
+            this.loadUsers();
+          },
+          error: (err) => {
+            this.isLoading = false;
+          },
         });
       },
     });
   }
 
   openPermissions(user: any) {
-    if (user.usuario === this.authService.getCurrentUser()?.usuario) {
+    if (user.email === this.usersService.getCurrentUser()?.email) {
       this.messageService.add({
         severity: 'error',
         summary: 'Acción Denegada',
@@ -197,7 +232,9 @@ export class AdminUsers implements OnInit {
   }
 
   savePermissions() {
-    if (this.selectedUser.usuario === this.authService.getCurrentUser()?.usuario) {
+    if (!this.selectedUser) return;
+
+    if (this.selectedUser.email === this.usersService.getCurrentUser()?.email) {
       this.messageService.add({
         severity: 'error',
         summary: 'Acción Denegada',
@@ -206,18 +243,25 @@ export class AdminUsers implements OnInit {
       return;
     }
 
-    if (this.selectedUser) {
-      const updatedUser = { ...this.selectedUser, permissions: this.selectedPermissions };
+    this.isSaving = true;
 
-      this.authService.updateUser(updatedUser);
-      this.loadUsers();
-      this.permissionsDialog = false;
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Permisos actualizados correctamente',
-      });
-    }
+    this.usersService.updatePermissions(this.selectedUser.id, this.selectedPermissions).subscribe({
+      next: (res) => {
+        this.isSaving = false;
+        this.permissionsDialog = false;
+
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Permisos Actualizados',
+          detail: res.data[0].message || 'Los cambios se guardaron exitosamente.',
+        });
+
+        this.loadUsers();
+      },
+      error: (err) => {
+        this.isSaving = false;
+      },
+    });
   }
 
   get uf() {

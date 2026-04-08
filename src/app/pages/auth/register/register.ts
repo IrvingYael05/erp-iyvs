@@ -15,7 +15,7 @@ import { PasswordModule } from 'primeng/password';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { AuthService } from '../../../core/services/auth/auth';
+import { UsersService } from '../../../core/services/users/users';
 
 // Validador para 18+
 function ageValidator(control: AbstractControl): ValidationErrors | null {
@@ -58,7 +58,9 @@ export class Register {
   private fb = inject(FormBuilder);
   private messageService = inject(MessageService);
   private router = inject(Router);
-  private authService = inject(AuthService);
+  private UsersService = inject(UsersService);
+
+  isLoading = false;
 
   // Definición del formulario
   registerForm: FormGroup = this.fb.group(
@@ -67,10 +69,7 @@ export class Register {
       email: ['', [Validators.required, Validators.email]],
       nombreCompleto: ['', [Validators.required, Validators.minLength(5)]],
       direccion: ['', [Validators.required]],
-      telefono: [
-        '',
-        [Validators.required, Validators.pattern('^[0-9]{10}$')],
-      ],
+      telefono: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]],
       fechaNacimiento: [null, [Validators.required, ageValidator]],
       password: [
         '',
@@ -87,19 +86,21 @@ export class Register {
 
   onSubmit() {
     if (this.registerForm.valid) {
+      this.isLoading = true;
       const { confirmPassword, ...userData } = this.registerForm.value;
 
-      this.authService.registerUser(userData);
-
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Registro Exitoso',
-        detail: 'Tu cuenta ha sido creada correctamente.',
+      this.UsersService.register(userData).subscribe({
+        next: (res) => {
+          this.isLoading = false;
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Registro Exitoso',
+            detail: 'Tu cuenta ha sido creada correctamente.',
+          });
+          setTimeout(() => this.router.navigate(['/auth/login']), 2000);
+        },
+        error: () => (this.isLoading = false),
       });
-
-      setTimeout(() => {
-        this.router.navigate(['/auth/login']);
-      }, 2000);
     } else {
       this.registerForm.markAllAsTouched();
     }

@@ -7,7 +7,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { AuthService } from '../../../core/services/auth/auth';
+import { UsersService } from '../../../core/services/users/users';
 
 @Component({
   selector: 'app-login',
@@ -21,17 +21,17 @@ import { AuthService } from '../../../core/services/auth/auth';
     PasswordModule,
     ToastModule,
   ],
-  providers: [MessageService],
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
 export class Login {
   private fb = inject(FormBuilder);
-  private authService = inject(AuthService);
+  private UsersService = inject(UsersService);
   private router = inject(Router);
   private messageService = inject(MessageService);
 
-  // Formulario
+  isLoading = false;
+
   loginForm: FormGroup = this.fb.group({
     usuario: ['', [Validators.required]],
     password: ['', [Validators.required]],
@@ -39,28 +39,26 @@ export class Login {
 
   onSubmit() {
     if (this.loginForm.valid) {
+      this.isLoading = true;
+
       const { usuario, password } = this.loginForm.value;
 
-      // Verifica las credenciales
-      const isValid = this.authService.login(usuario, password);
+      this.UsersService.login(usuario, password).subscribe({
+        next: (response) => {
+          this.isLoading = false;
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Acceso Concedido',
+            detail: response.data[0].message || 'Redirigiendo...',
+          });
 
-      if (isValid) {
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Acceso Concedido',
-          detail: 'Redirigiendo al panel de control...',
-        });
-
-        setTimeout(() => {
           this.router.navigate(['/home']);
-        }, 1000);
-      } else {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Acceso Denegado',
-          detail: 'Usuario o contraseña incorrectos.',
-        });
-      }
+        },
+        error: (err) => {
+          this.isLoading = false;
+          this.loginForm.get('password')?.reset();
+        },
+      });
     } else {
       this.loginForm.markAllAsTouched();
     }

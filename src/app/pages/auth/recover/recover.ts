@@ -1,20 +1,18 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { AuthService } from '../../../core/services/auth/auth';
+import { UsersService } from '../../../core/services/users/users';
 import { CardModule } from 'primeng/card';
 import { Divider } from 'primeng/divider';
-import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-recover',
   standalone: true,
   imports: [
-    CommonModule,
     RouterLink,
     ButtonModule,
     ReactiveFormsModule,
@@ -29,7 +27,10 @@ import { CommonModule } from '@angular/common';
 export class Recover {
   private fb = inject(FormBuilder);
   private messageService = inject(MessageService);
-  private authService = inject(AuthService);
+  private UsersService = inject(UsersService);
+  private router = inject(Router);
+
+  isLoading = false;
 
   recoverForm: FormGroup = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -38,27 +39,30 @@ export class Recover {
   emailSent: boolean = false;
 
   onSubmit() {
-    if (this.recoverForm.invalid) {
-      this.recoverForm.markAllAsTouched();
-      return;
-    }
+    if (this.recoverForm.valid) {
+      this.isLoading = true;
+      const { email } = this.recoverForm.value;
 
-    const email = this.recoverForm.value.email;
+      this.UsersService.recoverPassword(email).subscribe({
+        next: (res) => {
+          this.isLoading = false;
 
-    if (this.authService.userExists(email)) {
-      // Futuro código Supabase: await supabase.auth.resetPasswordForEmail(email)
-      this.emailSent = true;
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Correo enviado',
-        detail: 'Revisa tu bandeja de entrada para restablecer tu contraseña.',
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Solicitud Recibida',
+            detail: res.data[0].message || 'Si el correo existe, recibirás instrucciones.',
+          });
+
+          setTimeout(() => {
+            this.router.navigate(['/auth/login']);
+          }, 2000);
+        },
+        error: (err) => {
+          this.isLoading = false;
+        },
       });
     } else {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No existe ninguna cuenta asociada a este correo.',
-      });
+      this.recoverForm.markAllAsTouched();
     }
   }
 

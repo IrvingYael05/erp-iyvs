@@ -18,7 +18,7 @@
             <p class="text-xs text-slate-500 m-0">{{ user?.email }}</p>
           </div>
           <p-avatar
-            [label]="(user?.usuario?.charAt(0) | uppercase) || 'U'"
+            [label]="(user?.nombreCompleto?.charAt(0) | uppercase) || 'U'"
             styleClass="bg-[var(--p-primary-100)] text-[var(--p-primary-600)] font-bold"
             shape="circle"
             size="large"

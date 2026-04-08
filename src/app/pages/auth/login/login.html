@@ -20,16 +20,16 @@
 
     <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-6">
       <div class="flex flex-col gap-2">
-        <label for="usuario" class="text-sm font-semibold text-slate-700">Usuario</label>
+        <label for="usuario" class="text-sm font-semibold text-slate-700">Correo Electrónico</label>
         <input
           pInputText
           id="usuario"
           formControlName="usuario"
-          placeholder="Ej. admin"
+          placeholder="Ej. admin@nexoserp.com"
           class="w-full"
         />
         @if (f['usuario'].invalid && (f['usuario'].dirty || f['usuario'].touched)) {
-          <small class="text-red-500">El usuario es requerido.</small>
+          <small class="text-red-500">El correo electrónico es requerido.</small>
         }
       </div>
 
@@ -62,6 +62,7 @@
           label="Ingresar al sistema"
           type="submit"
           [disabled]="loginForm.invalid"
+          [loading]="isLoading"
           styleClass="w-full"
           size="large"
         ></p-button>

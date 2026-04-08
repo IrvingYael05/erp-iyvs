@@ -55,6 +55,11 @@ export const routes: Routes = [
     canActivate: [guestGuard],
   },
   {
+    path: 'auth/reset',
+    loadComponent: () => import('./pages/auth/reset/reset').then((c) => c.ResetPassword),
+    canActivate: [guestGuard],
+  },
+  {
     path: '**',
     loadComponent: () => import('./pages/not-found/not-found').then((c) => c.NotFound),
   },

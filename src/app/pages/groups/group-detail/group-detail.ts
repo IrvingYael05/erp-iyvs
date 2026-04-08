@@ -13,7 +13,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { HasPermission } from '../../../core/directives/permission/has-permission';
 import { Permission } from '../../../core/services/permission/permission';
 import { GroupService } from '../../../core/services/group/group';
-import { AuthService } from '../../../core/services/auth/auth';
+import { UsersService } from '../../../core/services/users/users';
 import { DialogModule } from 'primeng/dialog';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import { TextareaModule } from 'primeng/textarea';
@@ -59,7 +59,7 @@ export class GroupDetail implements OnInit {
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
   private groupService = inject(GroupService);
-  private authService = inject(AuthService);
+  private UsersService = inject(UsersService);
   private permissionService = inject(Permission);
 
   grupoId: number | null = null;
@@ -121,7 +121,7 @@ export class GroupDetail implements OnInit {
   ];
 
   get currentUserEmail(): string {
-    return this.authService.getCurrentUser()?.email || '';
+    return this.UsersService.getCurrentUser()?.email || '';
   }
 
   hasLocalPerm(action: string): boolean {
@@ -171,7 +171,7 @@ export class GroupDetail implements OnInit {
 
   loadDashboardData() {
     this.groupStats = this.groupService.getGroupTicketStats(this.grupoId!);
-    const currentUserEmail = this.authService.getCurrentUser()?.email;
+    const currentUserEmail = this.UsersService.getCurrentUser()?.email;
     const misTickets = this.groupService.getGroupTicketsFiltered(
       this.grupoId!,
       'mis_tickets',
@@ -193,14 +193,6 @@ export class GroupDetail implements OnInit {
     if (this.integranteForm.invalid) return;
     const emailNuevo = this.integranteForm.value.email.toLowerCase().trim();
 
-    if (!this.authService.userExists(emailNuevo)) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No existe un usuario con este correo en el sistema.',
-      });
-      return;
-    }
     if (this.grupo.integrantesList?.includes(emailNuevo)) {
       this.messageService.add({
         severity: 'warn',
@@ -223,7 +215,7 @@ export class GroupDetail implements OnInit {
   }
 
   abrirModalPermisos(email: string) {
-    if (email === this.authService.getCurrentUser()?.usuario) {
+    if (email === this.UsersService.getCurrentUser()?.usuario) {
       this.messageService.add({
         severity: 'error',
         summary: 'Acción Denegada',
@@ -241,7 +233,7 @@ export class GroupDetail implements OnInit {
   }
 
   guardarPermisosLocales() {
-    if (this.selectedMemberEmail === this.authService.getCurrentUser()?.usuario) {
+    if (this.selectedMemberEmail === this.UsersService.getCurrentUser()?.usuario) {
       this.messageService.add({
         severity: 'error',
         summary: 'Acción Denegada',
@@ -284,7 +276,7 @@ export class GroupDetail implements OnInit {
       rejectLabel: 'Cancelar',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        const currentUserEmail = this.authService.getCurrentUser()?.email;
+        const currentUserEmail = this.UsersService.getCurrentUser()?.email;
         if (currentUserEmail === email) {
           this.messageService.add({
             severity: 'error',
@@ -311,7 +303,7 @@ export class GroupDetail implements OnInit {
 
   aplicarFiltro(nuevoFiltro: 'todos' | 'mis_tickets' | 'sin_asignar' | 'prioridad_alta') {
     this.filtroActual = nuevoFiltro;
-    const currentUserEmail = this.authService.getCurrentUser()?.email;
+    const currentUserEmail = this.UsersService.getCurrentUser()?.email;
     this.ticketsList = this.groupService.getGroupTicketsFiltered(
       this.grupoId!,
       this.filtroActual,
@@ -343,8 +335,8 @@ export class GroupDetail implements OnInit {
     }
 
     if (this.draggedTicket && this.draggedTicket.estado !== estadoDestino) {
-      const currentUserEmail = this.authService.getCurrentUser()?.email;
-      const currentUserNombre = this.authService.getCurrentUser()?.nombreCompleto || 'Usuario';
+      const currentUserEmail = this.UsersService.getCurrentUser()?.email;
+      const currentUserNombre = this.UsersService.getCurrentUser()?.nombreCompleto || 'Usuario';
 
       if (
         this.draggedTicket.autorEmail &&
@@ -436,7 +428,7 @@ export class GroupDetail implements OnInit {
       nuevoComentario: '',
     });
 
-    const currentUserEmail = this.authService.getCurrentUser()?.email;
+    const currentUserEmail = this.UsersService.getCurrentUser()?.email;
     const hasLocalEdit = this.hasLocalPerm('edit');
 
     if (!hasLocalEdit) {
@@ -483,7 +475,7 @@ export class GroupDetail implements OnInit {
     const texto = this.ticketForm.get('nuevoComentario')?.value;
     if (!texto || texto.trim() === '') return;
 
-    const currentUser = this.authService.getCurrentUser()?.nombreCompleto || 'Usuario';
+    const currentUser = this.UsersService.getCurrentUser()?.nombreCompleto || 'Usuario';
     const nuevoComentarioObj = {
       autor: currentUser,
       fecha: new Date(),
@@ -511,8 +503,8 @@ export class GroupDetail implements OnInit {
     }
 
     const formValue = this.ticketForm.getRawValue();
-    const currentUser = this.authService.getCurrentUser()?.nombreCompleto || 'Usuario';
-    const currentUserEmail = this.authService.getCurrentUser()?.email;
+    const currentUser = this.UsersService.getCurrentUser()?.nombreCompleto || 'Usuario';
+    const currentUserEmail = this.UsersService.getCurrentUser()?.email;
     const fechaActual = new Date().toLocaleString();
 
     if (

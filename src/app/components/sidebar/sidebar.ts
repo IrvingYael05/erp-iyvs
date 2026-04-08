@@ -1,10 +1,11 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
-import { AuthService } from '../../core/services/auth/auth';
-import { Permission } from '../../core/services/permission/permission'; // Importar el servicio
+import { UsersService } from '../../core/services/users/users';
+import { Permission } from '../../core/services/permission/permission';
 import { ButtonModule } from 'primeng/button';
 import { PanelMenuModule } from 'primeng/panelmenu';
 import { MenuItem } from 'primeng/api';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-sidebar',
@@ -14,14 +15,18 @@ import { MenuItem } from 'primeng/api';
   styleUrl: './sidebar.scss',
 })
 export class Sidebar implements OnInit {
-  private authService = inject(AuthService);
-  private permissionService = inject(Permission); // Inyectar
+  private UsersService = inject(UsersService);
+  private permissionService = inject(Permission);
   private router = inject(Router);
+  private messageService = inject(MessageService);
 
+  isLoading = false;
   menuItems: MenuItem[] = [];
 
   ngOnInit() {
-    this.buildMenu();
+    this.UsersService.currentUser$.subscribe(() => {
+      this.buildMenu();
+    });
   }
 
   buildMenu() {
@@ -49,7 +54,20 @@ export class Sidebar implements OnInit {
   }
 
   logout() {
-    this.authService.logout();
-    this.router.navigate(['/auth/login']);
+    this.isLoading = true;
+    this.UsersService.logout().subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Sesión Cerrada',
+          detail: response.data && response.data[0] ? response.data[0].message : 'Redirigiendo...',
+        });
+        this.router.navigate(['/auth/login']);
+      },
+      error: (err) => {
+        this.isLoading = false;
+      },
+    });
   }
 }

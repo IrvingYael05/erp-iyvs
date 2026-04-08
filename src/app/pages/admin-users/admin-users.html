@@ -7,11 +7,14 @@
       #dtUsers
       [value]="users"
       [paginator]="true"
-      [rows]="10"
-      [globalFilterFields]="['usuario', 'nombreCompleto', 'email']"
+      [rows]="5"
+      [lazy]="true"
+      (onLazyLoad)="loadUsers($event)"
+      [totalRecords]="totalRecords"
+      [loading]="isLoading"
+      dataKey="id"
       [tableStyle]="{ 'min-width': '50rem' }"
       [rowHover]="true"
-      dataKey="id"
     >
       <ng-template pTemplate="caption">
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
@@ -37,7 +40,6 @@
 
       <ng-template pTemplate="header">
         <tr>
-          <th pSortableColumn="usuario">Usuario <p-sortIcon field="usuario"></p-sortIcon></th>
           <th pSortableColumn="nombreCompleto">
             Nombre Completo <p-sortIcon field="nombreCompleto"></p-sortIcon>
           </th>
@@ -53,17 +55,10 @@
 
       <ng-template pTemplate="body" let-user>
         <tr>
-          <td class="font-medium text-slate-800">{{ user.usuario }}</td>
           <td>{{ user.nombreCompleto }}</td>
           <td class="text-slate-600">{{ user.email }}</td>
           <td>
             <p-tag [value]="(user.permissions?.length || 0) + ' Permisos'" severity="info"></p-tag>
-            <p-tag
-              *ngIf="isSuperAdmin(user)"
-              value="SuperAdmin"
-              severity="danger"
-              class="ml-2"
-            ></p-tag>
           </td>
           <td *appHasPermission="['user-manage:edit', 'user-manage:delete']" class="text-center">
             <p-button
@@ -78,7 +73,7 @@
             <p-button
               *appHasPermission="'user-manage:delete'"
               icon="pi pi-trash"
-              pTooltip="Eliminar Usuario"
+              pTooltip="Suspender"
               [rounded]="true"
               [text]="true"
               severity="danger"
@@ -107,13 +102,6 @@
     <ng-template pTemplate="content">
       <form [formGroup]="userForm" class="flex flex-col gap-4 p-2 mt-2">
         <div class="flex flex-col gap-2">
-          <label class="font-semibold text-slate-700">Nombre de Usuario *</label>
-          <input type="text" pInputText formControlName="usuario" />
-          <small class="text-red-500" *ngIf="uf['usuario'].invalid && uf['usuario'].touched"
-            >El usuario es requerido.</small
-          >
-        </div>
-        <div class="flex flex-col gap-2">
           <label class="font-semibold text-slate-700">Correo Electrónico *</label>
           <input type="email" pInputText formControlName="email" />
           <small class="text-red-500" *ngIf="uf['email'].invalid && uf['email'].touched"
@@ -126,7 +114,7 @@
           <small
             class="text-red-500"
             *ngIf="uf['nombreCompleto'].invalid && uf['nombreCompleto'].touched"
-            >El nombre es requerido.</small
+            >El nombre es requerido y debe tener al menos 5 caracteres.</small
           >
         </div>
         <div class="flex flex-col gap-2">
@@ -139,7 +127,8 @@
             fluid="true"
           ></p-password>
           <small class="text-red-500" *ngIf="uf['password'].invalid && uf['password'].touched"
-            >La contraseña es requerida.</small
+            >La contraseña es requerida y debe tener al menos 10 caracteres y 1 carácter
+            especial.</small
           >
         </div>
       </form>
@@ -152,7 +141,12 @@
         severity="secondary"
         (onClick)="userDialog = false"
       ></p-button>
-      <p-button label="Guardar Usuario" icon="pi pi-check" (onClick)="saveNewUser()"></p-button>
+      <p-button
+        label="Guardar Usuario"
+        icon="pi pi-check"
+        (onClick)="saveNewUser()"
+        [loading]="isSaving"
+      ></p-button>
     </ng-template>
   </p-dialog>
 
@@ -223,6 +217,7 @@
       <p-button
         label="Guardar Permisos"
         icon="pi pi-check"
+        [loading]="isSaving"
         (onClick)="savePermissions()"
       ></p-button>
     </ng-template>

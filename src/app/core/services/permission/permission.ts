@@ -1,14 +1,14 @@
 import { Injectable, inject } from '@angular/core';
-import { AuthService } from '../auth/auth';
+import { UsersService } from '../users/users';
 
 @Injectable({
   providedIn: 'root',
 })
 export class Permission {
-  private authService = inject(AuthService);
+  private UsersService = inject(UsersService);
 
   hasPermission(permission: string | string[]): boolean {
-    const user = this.authService.getCurrentUser();
+    const user = this.UsersService.getCurrentUser();
 
     if (!user || !user.permissions) {
       return false;

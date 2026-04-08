@@ -7,7 +7,7 @@ import { ButtonModule } from 'primeng/button';
 import { ChartModule } from 'primeng/chart';
 import { GroupService } from '../../core/services/group/group';
 import { Permission } from '../../core/services/permission/permission';
-import { AuthService } from '../../core/services/auth/auth';
+import { UsersService } from '../../core/services/users/users';
 
 @Component({
   selector: 'app-home',
@@ -20,7 +20,7 @@ export class Home implements OnInit {
   private groupService = inject(GroupService);
   private router = inject(Router);
   private permissionService = inject(Permission);
-  private authService = inject(AuthService);
+  private UsersService = inject(UsersService);
 
   kpis: any[] = [];
   grupos: any[] = [];
@@ -33,7 +33,7 @@ export class Home implements OnInit {
   }
 
   cargarDashboard() {
-    const currentUserEmail = this.authService.getCurrentUser()?.email;
+    const currentUserEmail = this.UsersService.getCurrentUser()?.email;
 
     const stats = this.groupService.getTicketStats(currentUserEmail);
     this.grupos = this.groupService.getUserGroups(currentUserEmail!);

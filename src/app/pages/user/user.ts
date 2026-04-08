@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MainLayout } from '../../layout/main-layout/main-layout';
-import { AuthService } from '../../core/services/auth/auth';
+import { UsersService } from '../../core/services/users/users';
 import { GroupService } from '../../core/services/group/group';
 import { CardModule } from 'primeng/card';
 import { AvatarModule } from 'primeng/avatar';
@@ -71,14 +71,14 @@ function passwordMatchValidator(group: AbstractControl): ValidationErrors | null
   styleUrl: './user.scss',
 })
 export class User implements OnInit {
-  private authService = inject(AuthService);
+  private UsersService = inject(UsersService);
   private groupService = inject(GroupService);
   private fb = inject(FormBuilder);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
   private router = inject(Router);
 
-  userData = this.authService.getCurrentUser();
+  userData = this.UsersService.getCurrentUser();
   profileForm!: FormGroup;
 
   minDate: Date = new Date();
@@ -89,20 +89,31 @@ export class User implements OnInit {
   passwordDialog: boolean = false;
   passwordForm!: FormGroup;
 
+  isProfileLoading = false;
+  isPasswordLoading = false;
+  isDeleteLoading = false;
+
   ngOnInit() {
     this.profileForm = this.fb.group({
-      usuario: [{ value: this.userData?.usuario, disabled: true }],
-      email: [{ value: this.userData?.email, disabled: true }],
-      nombreCompleto: [
-        this.userData?.nombreCompleto,
-        [Validators.required, Validators.minLength(5)],
-      ],
-      direccion: [this.userData?.direccion, [Validators.required]],
-      telefono: [this.userData?.telefono, [Validators.required, Validators.pattern('^[0-9]{10}$')]],
-      fechaNacimiento: [
-        this.userData?.fechaNacimiento ? new Date(this.userData.fechaNacimiento) : null,
-        [Validators.required, ageValidator],
-      ],
+      email: [{ value: '', disabled: true }],
+      nombreCompleto: ['', [Validators.required, Validators.minLength(5)]],
+      direccion: ['', [Validators.required]],
+      telefono: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]],
+      fechaNacimiento: [null, [Validators.required, ageValidator]],
+    });
+
+    this.UsersService.currentUser$.subscribe((user) => {
+      if (user) {
+        this.userData = user;
+
+        this.profileForm.patchValue({
+          email: user.email,
+          nombreCompleto: user.nombreCompleto,
+          direccion: user.direccion,
+          telefono: user.telefono,
+          fechaNacimiento: user.fechaNacimiento ? new Date(user.fechaNacimiento) : null,
+        });
+      }
     });
 
     this.cargarDatosLaborales();
@@ -135,23 +146,23 @@ export class User implements OnInit {
       return;
     }
 
+    this.isPasswordLoading = true;
     const { oldPassword, newPassword } = this.passwordForm.value;
 
-    if (!this.authService.validatePassword(this.userData.usuario, oldPassword)) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'La contraseña actual es incorrecta.',
-      });
-      return;
-    }
-
-    this.authService.updatePassword(this.userData.usuario, newPassword);
-    this.passwordDialog = false;
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Éxito',
-      detail: 'Tu contraseña ha sido actualizada.',
+    this.UsersService.changePassword(oldPassword, newPassword).subscribe({
+      next: (res) => {
+        this.isPasswordLoading = false;
+        this.passwordDialog = false;
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Seguridad',
+          detail: res.data[0].message,
+        });
+      },
+      error: (err) => {
+        this.isPasswordLoading = false;
+        this.passwordForm.get('oldPassword')?.reset();
+      },
     });
   }
 
@@ -168,18 +179,27 @@ export class User implements OnInit {
 
   onUpdateProfile() {
     if (this.profileForm.valid) {
-      const updatedData = { ...this.userData, ...this.profileForm.getRawValue() };
+      this.isProfileLoading = true;
 
-      this.authService.updateUser(updatedData);
-      this.userData = this.authService.getCurrentUser();
+      const { nombreCompleto, direccion, telefono, fechaNacimiento } =
+        this.profileForm.getRawValue();
 
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Perfil Actualizado',
-        detail: 'Tus datos se guardaron correctamente en el sistema.',
-      });
-
-      this.profileForm.markAsPristine();
+      this.UsersService
+        .updateProfile({ nombreCompleto, direccion, telefono, fechaNacimiento })
+        .subscribe({
+          next: (res) => {
+            this.isProfileLoading = false;
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Perfil Actualizado',
+              detail: res.data[0].message || 'Tus datos han sido actualizados.',
+            });
+            this.profileForm.markAsPristine();
+          },
+          error: (err) => {
+            this.isProfileLoading = false;
+          },
+        });
     } else {
       this.profileForm.markAllAsTouched();
     }
@@ -187,24 +207,27 @@ export class User implements OnInit {
 
   deactivateAccount() {
     this.confirmationService.confirm({
-      message:
-        '¿Estás seguro de que deseas eliminar tu cuenta? Esta acción restringirá tu acceso al sistema.',
-      header: 'Eliminar Cuenta',
+      message: '¿Estás seguro de que deseas eliminar tu cuenta? Esta acción es irreversible.',
+      header: 'Confirmar Eliminación',
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Sí, eliminar',
-      rejectLabel: 'Cancelar',
+      acceptLabel: 'Eliminar definitivamente',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.messageService.add({
-          severity: 'warn',
-          summary: 'Cuenta Eliminada',
-          detail: 'Cerrando sesión y eliminando datos...',
+        this.isDeleteLoading = true;
+        this.UsersService.deleteAccount().subscribe({
+          next: (res) => {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Cuenta Eliminada',
+              detail: res.data[0].message,
+            });
+            this.isDeleteLoading = false;
+            setTimeout(() => this.router.navigate(['/auth/login']), 2000);
+          },
+          error: (err) => {
+            this.isDeleteLoading = false;
+          },
         });
-
-        setTimeout(() => {
-          this.authService.deleteUser(this.userData.usuario);
-          this.router.navigate(['/auth/login']);
-        }, 2000);
       },
     });
   }

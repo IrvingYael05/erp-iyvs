@@ -1,7 +1,7 @@
 import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Sidebar } from '../../components/sidebar/sidebar';
-import { AuthService } from '../../core/services/auth/auth';
+import { UsersService } from '../../core/services/users/users';
 import { ToolbarModule } from 'primeng/toolbar';
 import { AvatarModule } from 'primeng/avatar';
 
@@ -15,6 +15,6 @@ import { AvatarModule } from 'primeng/avatar';
 export class MainLayout {
   @Input() pageTitle: string = 'Panel de Control';
   
-  private authService = inject(AuthService);
-  user = this.authService.getCurrentUser();
+  private UsersService = inject(UsersService);
+  user = this.UsersService.getCurrentUser();
 }
