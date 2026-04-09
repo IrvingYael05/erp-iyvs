@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MainLayout } from '../../../layout/main-layout/main-layout';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -16,6 +16,7 @@ import { HasPermission } from '../../../core/directives/permission/has-permissio
 import { UsersService } from '../../../core/services/users/users';
 import { GroupService } from '../../../core/services/group/group';
 import { Router } from '@angular/router';
+import { TableLazyLoadEvent } from 'primeng/table';
 
 @Component({
   selector: 'app-group',
@@ -46,8 +47,9 @@ export class Group implements OnInit {
   private UsersService = inject(UsersService);
   private groupService = inject(GroupService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
-  grupos: any[] = [];
+  groups: any[] = [];
   grupoDialog: boolean = false;
   isEditMode: boolean = false;
 
@@ -61,106 +63,185 @@ export class Group implements OnInit {
   niveles = ['Básico', 'Intermedio', 'Avanzado'];
   filteredNiveles: any[] = [];
 
+  isLoading = true;
+  isSaving = false;
+
+  selectedGroupId: string | null = null;
+  totalRecords = 0;
+
   searchNivel(event: any) {
     const query = event.query.toLowerCase();
     this.filteredNiveles = this.niveles.filter((n) => n.toLowerCase().includes(query));
   }
 
-  ngOnInit() {
-    this.cargarGrupos();
-  }
+  ngOnInit() {}
 
-  cargarGrupos() {
-    this.grupos = this.groupService.getGroups();
-  }
+  // ----- Cargar Grupos desde el Backend -----
+  loadGroups(event?: TableLazyLoadEvent) {
+    this.isLoading = true;
 
-  openNew() {
-    this.isEditMode = false;
-    this.grupoForm.reset();
-    this.grupoDialog = true;
-  }
+    let page = 1;
+    let limit = 5;
+    let search = '';
 
-  editGrupo(grupo: any) {
-    this.isEditMode = true;
-    this.grupoForm.patchValue(grupo);
-    this.grupoDialog = true;
-  }
+    if (event) {
+      limit = event.rows || 5;
+      page = (event.first || 0) / limit + 1;
 
-  manageGroup(grupo: any) {
-    this.router.navigate(['/group', grupo.id]);
-  }
+      if (event.globalFilter) {
+        search = event.globalFilter as string;
+      }
+    }
 
-  deleteGrupo(grupo: any) {
-    this.confirmationService.confirm({
-      message: '¿Estás seguro de que deseas eliminar el grupo "' + grupo.nombre + '"?',
-      header: 'Confirmar Eliminación',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Sí, eliminar',
-      rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        this.groupService.deleteGroup(grupo.id);
-        this.cargarGrupos();
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Grupo eliminado correctamente',
-          life: 3000,
-        });
+    this.groupService.getGroups(page, limit, search).subscribe({
+      next: (res) => {
+        if (res.data && res.data[0]) {
+          const payload = res.data[0];
+          this.groups = Array.isArray(payload.groups)
+            ? payload.groups
+            : Array.isArray(payload)
+              ? payload
+              : [];
+          this.totalRecords = payload.totalRecords || this.groups.length;
+        } else {
+          this.groups = [];
+          this.totalRecords = 0;
+        }
+      },
+      error: (err) => {
+        console.error('Error al cargar grupos:', err);
+        this.groups = [];
+        this.totalRecords = 0;
+      },
+      complete: () => {
+        this.isLoading = false;
+        this.cdr.detectChanges();
       },
     });
   }
 
-  hideDialog() {
-    this.grupoDialog = false;
-  }
-
+  // ----- Crear Grupo -----
   saveGrupo() {
     if (this.grupoForm.invalid) {
       this.grupoForm.markAllAsTouched();
       return;
     }
 
-    if (this.grupoForm.value.nivel != this.niveles.find((n) => n === this.grupoForm.value.nivel)) {
+    if (!this.niveles.includes(this.grupoForm.value.nivel)) {
       this.messageService.add({
         severity: 'error',
         summary: 'Error',
-        detail: 'El nivel ingresado no es válido',
-        life: 3000,
+        detail: 'El nivel ingresado no es válido.',
       });
       return;
     }
 
-    const formValue = this.grupoForm.value;
-    const currentUser = this.UsersService.getCurrentUser();
+    this.isSaving = true;
+    const { nombre, descripcion, nivel } = this.grupoForm.value;
 
-    if (this.isEditMode) {
-      const originalGroup = this.groupService.getGroupById(formValue.id);
-      const updatedGroup = { ...originalGroup, ...formValue };
+    if (this.isEditMode && this.selectedGroupId) {
+      this.groupService
+        .updateGroup(this.selectedGroupId, { nombre, descripcion, nivel })
+        .subscribe({
+          next: (res) => {
+            this.isSaving = false;
+            this.grupoDialog = false;
 
-      this.groupService.updateGroup(updatedGroup);
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Grupo actualizado correctamente',
-        life: 3000,
-      });
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Grupo Actualizado',
+              detail: res.data[0].message || 'Los cambios se guardaron exitosamente.',
+            });
+
+            this.loadGroups();
+          },
+          error: (err) => {
+            this.isSaving = false;
+          },
+        });
     } else {
-      formValue.autor = currentUser.nombreCompleto;
-      formValue.integrantesList = [currentUser.email];
-      formValue.ticketsList = [];
+      this.groupService.createGroup({ nombre, descripcion, nivel }).subscribe({
+        next: (res) => {
+          this.isSaving = false;
+          this.grupoDialog = false;
 
-      this.groupService.createGroup(formValue);
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Grupo creado correctamente',
-        life: 3000,
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Grupo Creado',
+            detail: res.data[0].message || 'El grupo se creó exitosamente.',
+          });
+
+          this.loadGroups();
+        },
+        error: (err) => {
+          this.isSaving = false;
+        },
       });
     }
+  }
 
-    this.cargarGrupos();
+  // ----- Editar Grupo -----
+  editGroup(group: any) {
+    this.isEditMode = true;
+    this.selectedGroupId = group.id;
+
+    this.grupoForm.patchValue({
+      nombre: group.nombre,
+      descripcion: group.descripcion,
+      nivel: group.nivel,
+    });
+
+    this.grupoDialog = true;
+  }
+
+  // ----- Eliminar Grupo -----
+  deleteGroup(group: any) {
+    this.confirmationService.confirm({
+      message: `¿Estás seguro de que deseas eliminar el grupo <b>"${group.nombre}"</b>? Esta acción es irreversible.`,
+      header: 'Confirmar Eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.isLoading = true;
+
+        this.groupService.deleteGroup(group.id).subscribe({
+          next: (res) => {
+            this.isLoading = false;
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Grupo Eliminado',
+              detail: res.data[0].message || 'El grupo se eliminó correctamente.',
+            });
+
+            this.loadGroups();
+          },
+          error: (err) => {
+            this.isLoading = false;
+          },
+        });
+      },
+    });
+  }
+
+  // ----- Abrir Modal -----
+  openNew() {
+    this.isEditMode = false;
+    this.grupoForm.reset({
+      nivel: 'Básico',
+    });
+    this.grupoDialog = true;
+  }
+
+  // ----- Cerrar Modal -----
+  hideDialog() {
     this.grupoDialog = false;
+  }
+
+  // ----- Navegar a Detalle del Grupo -----
+  manageGroup(groupId: any) {
+    this.router.navigate(['/group', groupId]);
   }
 
   get f() {

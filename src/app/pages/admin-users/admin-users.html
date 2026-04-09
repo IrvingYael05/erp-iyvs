@@ -193,6 +193,7 @@
                   class="p-3 text-center border-r border-slate-100 last:border-0"
                 >
                   <p-checkbox
+                    *ngIf="mod.key != 'user' || act.key != 'add'"
                     [value]="mod.key + ':' + act.key"
                     [(ngModel)]="selectedPermissions"
                     [inputId]="mod.key + act.key"

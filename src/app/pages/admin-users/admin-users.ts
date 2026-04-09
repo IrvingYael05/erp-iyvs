@@ -78,9 +78,9 @@ export class AdminUsers implements OnInit {
   totalRecords = 0;
 
   modules = [
+    { key: 'user', label: 'Perfil Usuario' },
     { key: 'group', label: 'Grupos' },
     { key: 'group-detail', label: 'Gestión Grupo' },
-    { key: 'user', label: 'Perfil Usuario' },
     { key: 'user-manage', label: 'Gestión Usuarios' },
   ];
 

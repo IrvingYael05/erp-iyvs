@@ -5,8 +5,12 @@
   <div class="card bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
     <p-table
       #dt
-      [value]="grupos"
+      [value]="groups"
       [rows]="5"
+      [loading]="isLoading"
+      [lazy]="true"
+      (onLazyLoad)="loadGroups($event)"
+      [totalRecords]="totalRecords"
       [paginator]="true"
       [globalFilterFields]="['nombre', 'autor', 'nivel']"
       [tableStyle]="{ 'min-width': '50rem' }"
@@ -67,11 +71,11 @@
             </span>
           </td>
           <td>{{ grupo.autor }}</td>
-          <td>{{ grupo.integrantesList?.length || 0 }}</td>
+          <td>{{ grupo.integrantes ?? 'Desconocido' }}</td>
           <td>
             <div class="flex items-center gap-2">
               <i class="pi pi-ticket text-slate-400"></i>
-              <span>{{ grupo.ticketsList?.length || 0 }}</span>
+              <span>{{ grupo.tickets ?? 'Desconocido' }}</span>
             </div>
           </td>
 
@@ -86,7 +90,7 @@
               [rounded]="true"
               [text]="true"
               severity="info"
-              (onClick)="manageGroup(grupo)"
+              (onClick)="manageGroup(grupo.id)"
             ></p-button>
 
             <p-button
@@ -96,7 +100,7 @@
               [rounded]="true"
               [text]="true"
               severity="info"
-              (onClick)="editGrupo(grupo)"
+              (onClick)="editGroup(grupo)"
             ></p-button>
 
             <p-button
@@ -106,7 +110,7 @@
               [rounded]="true"
               [text]="true"
               severity="danger"
-              (onClick)="deleteGrupo(grupo)"
+              (onClick)="deleteGroup(grupo)"
             ></p-button>
           </td>
         </tr>
@@ -191,8 +195,10 @@
         (onClick)="hideDialog()"
       ></p-button>
       <p-button
+        [loading]="isSaving"
         [label]="isEditMode ? 'Guardar Cambios' : 'Crear Grupo'"
         icon="pi pi-check"
+        [disabled]="grupoForm.invalid   || grupoForm.pristine"
         (onClick)="saveGrupo()"
       ></p-button>
     </ng-template>

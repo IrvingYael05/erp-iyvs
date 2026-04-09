@@ -42,25 +42,25 @@
               <div
                 class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center shadow-sm"
               >
-                <span class="text-3xl font-bold text-slate-700">{{ groupStats.pendientes }}</span>
+                <span class="text-3xl font-bold text-slate-700">{{ groupStats?.pendientes ?? "NA" }}</span>
                 <span class="text-sm text-slate-500 font-medium mt-1">Pendientes</span>
               </div>
               <div
                 class="bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col items-center justify-center text-center shadow-sm"
               >
-                <span class="text-3xl font-bold text-blue-700">{{ groupStats.enProgreso }}</span>
+                <span class="text-3xl font-bold text-blue-700">{{ groupStats?.enProgreso ?? "NA" }}</span>
                 <span class="text-sm text-blue-600 font-medium mt-1">En Progreso</span>
               </div>
               <div
                 class="bg-orange-50 p-4 rounded-xl border border-orange-100 flex flex-col items-center justify-center text-center shadow-sm"
               >
-                <span class="text-3xl font-bold text-orange-700">{{ groupStats.enRevision }}</span>
+                <span class="text-3xl font-bold text-orange-700">{{ groupStats?.enRevision ?? "NA" }}</span>
                 <span class="text-sm text-orange-600 font-medium mt-1">En Revisión</span>
               </div>
               <div
                 class="bg-green-50 p-4 rounded-xl border border-green-100 flex flex-col items-center justify-center text-center shadow-sm"
               >
-                <span class="text-3xl font-bold text-green-700">{{ groupStats.finalizados }}</span>
+                <span class="text-3xl font-bold text-green-700">{{ groupStats?.finalizados ?? "NA" }}</span>
                 <span class="text-sm text-green-600 font-medium mt-1">Hechos</span>
               </div>
             </div>
@@ -69,7 +69,7 @@
               Atención Requerida
             </h3>
 
-            <p-table [value]="recentOrAssignedTickets" [rowHover]="true">
+            <p-table [value]="recentOrAssignedTickets" [rowHover]="true" [loading]="isLoading">
               <ng-template pTemplate="header">
                 <tr class="bg-slate-50">
                   <th pSortableColumn="titulo">Título <p-sortIcon field="titulo"></p-sortIcon></th>
@@ -695,8 +695,8 @@
       <div class="flex flex-col gap-4 p-2 mt-2">
         <p class="text-slate-600 m-0 leading-relaxed">
           Matriz de acceso para
-          <span class="font-bold text-slate-800">{{ selectedMemberEmail }}</span> sobre los
-          tickets de este grupo:
+          <span class="font-bold text-slate-800">{{ selectedMemberEmail }}</span> sobre los tickets
+          de este grupo:
         </p>
 
         <div

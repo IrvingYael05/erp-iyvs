@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MainLayout } from '../../../layout/main-layout/main-layout';
@@ -23,6 +23,7 @@ import { DragDropModule } from 'primeng/dragdrop';
 import { CardModule } from 'primeng/card';
 import { FormsModule } from '@angular/forms';
 import { CheckboxModule } from 'primeng/checkbox';
+import { TicketService } from '../../../core/services/ticket/ticket';
 
 @Component({
   selector: 'app-group-detail',
@@ -59,10 +60,12 @@ export class GroupDetail implements OnInit {
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
   private groupService = inject(GroupService);
-  private UsersService = inject(UsersService);
+  private usersService = inject(UsersService);
   private permissionService = inject(Permission);
+  private cdr = inject(ChangeDetectorRef);
+  private ticketService = inject(TicketService);
 
-  grupoId: number | null = null;
+  grupoId: string | null = null;
   grupo: any = null;
 
   activeTab: string = '0';
@@ -121,68 +124,84 @@ export class GroupDetail implements OnInit {
   ];
 
   get currentUserEmail(): string {
-    return this.UsersService.getCurrentUser()?.email || '';
+    return this.usersService.getCurrentUser()?.email || '';
   }
 
-  hasLocalPerm(action: string): boolean {
-    if (!this.grupoId || !this.currentUserEmail) return false;
-    return this.groupService.hasLocalPermission(
-      this.grupoId,
-      this.currentUserEmail,
-      `ticket:${action}`,
-    );
-  }
+  isLoading = true;
 
   ngOnInit() {
     this.route.paramMap.subscribe((params) => {
-      const idParam = params.get('id');
-      if (idParam) {
-        this.grupoId = +idParam;
+      this.grupoId = params.get('id');
+
+      if (this.grupoId) {
         this.loadGroup();
       } else {
         this.volverDirectorio();
       }
     });
-
-    if (this.permissionService.hasPermission('group-detail:view')) {
-      this.activeTab = '0';
-    } else if (this.hasLocalPerm('view')) {
-      this.activeTab = '1';
-    }
   }
 
+  // ----- Cargar Grupos -----
   loadGroup() {
-    this.grupo = this.groupService.getGroupById(this.grupoId!);
-    if (!this.grupo) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Grupo no encontrado',
-      });
-      this.volverDirectorio();
-    } else {
-      this.aplicarFiltro(this.filtroActual);
-      this.loadDashboardData();
-      this.integrantesObjList = (this.grupo.integrantesList || []).map((email: string) => ({
-        email,
-      }));
-    }
+    this.isLoading = true;
+
+    this.groupService.getGroupById(this.grupoId!).subscribe({
+      next: (res) => {
+        this.isLoading = false;
+        if (res.data && res.data[0]) {
+          this.grupo = res.data[0];
+          this.loadDashboard();
+        }
+      },
+      error: (err) => {
+        this.isLoading = false;
+        this.volverDirectorio();
+      },
+      complete: () => {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+    });
   }
 
-  loadDashboardData() {
-    this.groupStats = this.groupService.getGroupTicketStats(this.grupoId!);
-    const currentUserEmail = this.UsersService.getCurrentUser()?.email;
-    const misTickets = this.groupService.getGroupTicketsFiltered(
-      this.grupoId!,
-      'mis_tickets',
-      currentUserEmail!,
-    );
+  // ----- Cargar Dashboard -----
+  loadDashboard() {
+    this.isLoading = true;
+    if (!this.grupoId) return;
 
-    if (misTickets.length > 0) {
-      this.recentOrAssignedTickets = misTickets.slice(0, 5);
-    } else {
-      this.recentOrAssignedTickets = [...this.grupo.ticketsList].reverse().slice(0, 5);
-    }
+    this.ticketService.getTicketStats(this.grupoId).subscribe({
+      next: (res) => {
+        if (res.data && res.data[0]) {
+          this.groupStats = res.data[0];
+        }
+      },
+      complete: () => {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+    });
+
+    this.ticketService.getTickets(this.grupoId, 1, 5, 'prioridad_alta').subscribe({
+      next: (res) => {
+        if (res.data && res.data[0]) {
+          this.recentOrAssignedTickets = res.data;
+        }
+      },
+      complete: () => {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  hasLocalPerm(action: string): boolean {
+    if (!this.grupoId || !this.currentUserEmail) return false;
+    // return this.groupService.hasLocalPermission(
+    //   this.grupoId,
+    //   this.currentUserEmail,
+    //   `ticket:${action}`,
+    // );
+    return this.permissionService.hasPermission(`ticket:${action}`);
   }
 
   volverDirectorio() {
@@ -202,7 +221,7 @@ export class GroupDetail implements OnInit {
       return;
     }
 
-    this.groupService.addMember(this.grupoId!, emailNuevo);
+    // this.groupService.addMember(this.grupoId!, emailNuevo);
     this.loadGroup();
     this.messageService.add({
       severity: 'success',
@@ -215,44 +234,44 @@ export class GroupDetail implements OnInit {
   }
 
   abrirModalPermisos(email: string) {
-    if (email === this.UsersService.getCurrentUser()?.usuario) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Acción Denegada',
-        detail: 'No puedes editar tu propia cuenta.',
-      });
-      return;
-    }
-    this.selectedMemberEmail = email;
-    const group = this.groupService.getGroupById(this.grupoId!);
-    this.selectedMemberPermissions =
-      group.memberPermissions && group.memberPermissions[email]
-        ? [...group.memberPermissions[email]]
-        : [];
-    this.permissionsDialog = true;
+    // if (email === this.UsersService.getCurrentUser()?.usuario) {
+    //   this.messageService.add({
+    //     severity: 'error',
+    //     summary: 'Acción Denegada',
+    //     detail: 'No puedes editar tu propia cuenta.',
+    //   });
+    //   return;
+    // }
+    // this.selectedMemberEmail = email;
+    // const group = this.groupService.getGroupById(this.grupoId!);
+    // this.selectedMemberPermissions =
+    //   group.memberPermissions && group.memberPermissions[email]
+    //     ? [...group.memberPermissions[email]]
+    //     : [];
+    // this.permissionsDialog = true;
   }
 
   guardarPermisosLocales() {
-    if (this.selectedMemberEmail === this.UsersService.getCurrentUser()?.usuario) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Acción Denegada',
-        detail: 'No puedes editar tu propia cuenta.',
-      });
-      return;
-    }
-    this.groupService.updateMemberPermissions(
-      this.grupoId!,
-      this.selectedMemberEmail,
-      this.selectedMemberPermissions,
-    );
-    this.loadGroup();
-    this.permissionsDialog = false;
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Éxito',
-      detail: 'Permisos del integrante actualizados',
-    });
+    // if (this.selectedMemberEmail === this.UsersService.getCurrentUser()?.usuario) {
+    //   this.messageService.add({
+    //     severity: 'error',
+    //     summary: 'Acción Denegada',
+    //     detail: 'No puedes editar tu propia cuenta.',
+    //   });
+    //   return;
+    // }
+    // this.groupService.updateMemberPermissions(
+    //   this.grupoId!,
+    //   this.selectedMemberEmail,
+    //   this.selectedMemberPermissions,
+    // );
+    // this.loadGroup();
+    // this.permissionsDialog = false;
+    // this.messageService.add({
+    //   severity: 'success',
+    //   summary: 'Éxito',
+    //   detail: 'Permisos del integrante actualizados',
+    // });
   }
 
   onLocalPermissionChange(event: any, actKey: string) {
@@ -268,33 +287,32 @@ export class GroupDetail implements OnInit {
   }
 
   eliminarIntegrante(email: string) {
-    this.confirmationService.confirm({
-      message: `¿Estás seguro de que deseas eliminar a ${email} del grupo?`,
-      header: 'Confirmar Eliminación',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Sí, eliminar',
-      rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        const currentUserEmail = this.UsersService.getCurrentUser()?.email;
-        if (currentUserEmail === email) {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'No puedes eliminarte a ti mismo del grupo.',
-          });
-          return;
-        }
-
-        this.groupService.removeMember(this.grupoId!, email);
-        this.loadGroup();
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Integrante removido del grupo',
-        });
-      },
-    });
+    // this.confirmationService.confirm({
+    //   message: `¿Estás seguro de que deseas eliminar a ${email} del grupo?`,
+    //   header: 'Confirmar Eliminación',
+    //   icon: 'pi pi-exclamation-triangle',
+    //   acceptLabel: 'Sí, eliminar',
+    //   rejectLabel: 'Cancelar',
+    //   acceptButtonStyleClass: 'p-button-danger',
+    //   accept: () => {
+    //     const currentUserEmail = this.UsersService.getCurrentUser()?.email;
+    //     if (currentUserEmail === email) {
+    //       this.messageService.add({
+    //         severity: 'error',
+    //         summary: 'Error',
+    //         detail: 'No puedes eliminarte a ti mismo del grupo.',
+    //       });
+    //       return;
+    //     }
+    //     this.groupService.removeMember(this.grupoId!, email);
+    //     this.loadGroup();
+    //     this.messageService.add({
+    //       severity: 'success',
+    //       summary: 'Éxito',
+    //       detail: 'Integrante removido del grupo',
+    //     });
+    //   },
+    // });
   }
 
   cambiarVista(vista: 'tabla' | 'kanban') {
@@ -302,13 +320,13 @@ export class GroupDetail implements OnInit {
   }
 
   aplicarFiltro(nuevoFiltro: 'todos' | 'mis_tickets' | 'sin_asignar' | 'prioridad_alta') {
-    this.filtroActual = nuevoFiltro;
-    const currentUserEmail = this.UsersService.getCurrentUser()?.email;
-    this.ticketsList = this.groupService.getGroupTicketsFiltered(
-      this.grupoId!,
-      this.filtroActual,
-      currentUserEmail!,
-    );
+    // this.filtroActual = nuevoFiltro;
+    // const currentUserEmail = this.UsersService.getCurrentUser()?.email;
+    // this.ticketsList = this.groupService.getGroupTicketsFiltered(
+    //   this.grupoId!,
+    //   this.filtroActual,
+    //   currentUserEmail!,
+    // );
   }
 
   getTicketsPorEstado(estado: string) {
@@ -324,56 +342,50 @@ export class GroupDetail implements OnInit {
   }
 
   drop(estadoDestino: string) {
-    if (!this.hasLocalPerm('edit')) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Acceso Denegado',
-        detail: 'No tienes permiso para editar el estado de los tickets.',
-      });
-      this.draggedTicket = null;
-      return;
-    }
-
-    if (this.draggedTicket && this.draggedTicket.estado !== estadoDestino) {
-      const currentUserEmail = this.UsersService.getCurrentUser()?.email;
-      const currentUserNombre = this.UsersService.getCurrentUser()?.nombreCompleto || 'Usuario';
-
-      if (
-        this.draggedTicket.autorEmail &&
-        this.draggedTicket.autorEmail !== currentUserEmail &&
-        this.draggedTicket.asignadoA !== currentUserEmail
-      ) {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Acceso Denegado',
-          detail: 'No tienes permisos para mover este ticket.',
-        });
-        this.draggedTicket = null;
-        return;
-      }
-
-      const index = this.grupo.ticketsList.findIndex((t: any) => t.id === this.draggedTicket.id);
-
-      if (index !== -1) {
-        const ticket = { ...this.grupo.ticketsList[index] };
-        ticket.estado = estadoDestino;
-
-        if (!ticket.historial) ticket.historial = [];
-        ticket.historial.push({
-          fecha: new Date(),
-          descripcion: `${currentUserNombre} movió el ticket a '${estadoDestino}'`,
-        });
-
-        this.groupService.updateTicket(this.grupoId!, ticket);
-        this.loadGroup();
-        this.messageService.add({
-          severity: 'info',
-          summary: 'Ticket Actualizado',
-          detail: `Movido a ${estadoDestino}`,
-        });
-      }
-    }
-    this.draggedTicket = null;
+    // if (!this.hasLocalPerm('edit')) {
+    //   this.messageService.add({
+    //     severity: 'error',
+    //     summary: 'Acceso Denegado',
+    //     detail: 'No tienes permiso para editar el estado de los tickets.',
+    //   });
+    //   this.draggedTicket = null;
+    //   return;
+    // }
+    // if (this.draggedTicket && this.draggedTicket.estado !== estadoDestino) {
+    //   const currentUserEmail = this.UsersService.getCurrentUser()?.email;
+    //   const currentUserNombre = this.UsersService.getCurrentUser()?.nombreCompleto || 'Usuario';
+    //   if (
+    //     this.draggedTicket.autorEmail &&
+    //     this.draggedTicket.autorEmail !== currentUserEmail &&
+    //     this.draggedTicket.asignadoA !== currentUserEmail
+    //   ) {
+    //     this.messageService.add({
+    //       severity: 'error',
+    //       summary: 'Acceso Denegado',
+    //       detail: 'No tienes permisos para mover este ticket.',
+    //     });
+    //     this.draggedTicket = null;
+    //     return;
+    //   }
+    //   const index = this.grupo.ticketsList.findIndex((t: any) => t.id === this.draggedTicket.id);
+    //   if (index !== -1) {
+    //     const ticket = { ...this.grupo.ticketsList[index] };
+    //     ticket.estado = estadoDestino;
+    //     if (!ticket.historial) ticket.historial = [];
+    //     ticket.historial.push({
+    //       fecha: new Date(),
+    //       descripcion: `${currentUserNombre} movió el ticket a '${estadoDestino}'`,
+    //     });
+    //     this.groupService.updateTicket(this.grupoId!, ticket);
+    //     this.loadGroup();
+    //     this.messageService.add({
+    //       severity: 'info',
+    //       summary: 'Ticket Actualizado',
+    //       detail: `Movido a ${estadoDestino}`,
+    //     });
+    //   }
+    // }
+    // this.draggedTicket = null;
   }
 
   buscarIntegrante(event: any) {
@@ -428,27 +440,27 @@ export class GroupDetail implements OnInit {
       nuevoComentario: '',
     });
 
-    const currentUserEmail = this.UsersService.getCurrentUser()?.email;
-    const hasLocalEdit = this.hasLocalPerm('edit');
+    // // const currentUserEmail = this.UsersService.getCurrentUser()?.email;
+    // const hasLocalEdit = this.hasLocalPerm('edit');
 
-    if (!hasLocalEdit) {
-      this.ticketForm.disable();
-      this.canEditTicket = false;
-    } else {
-      if (ticket.autorEmail && ticket.autorEmail !== currentUserEmail) {
-        if (ticket.asignadoA === currentUserEmail) {
-          this.ticketForm.get('titulo')?.disable();
-          this.ticketForm.get('descripcion')?.disable();
-          this.ticketForm.get('asignadoA')?.disable();
-          this.ticketForm.get('prioridad')?.disable();
-          this.ticketForm.get('fechaLimite')?.disable();
-        } else {
-          this.ticketForm.disable();
-          this.canEditTicket = false;
-        }
-      }
-    }
-    this.ticketDialog = true;
+    // if (!hasLocalEdit) {
+    //   this.ticketForm.disable();
+    //   this.canEditTicket = false;
+    // } else {
+    //   if (ticket.autorEmail && ticket.autorEmail !== currentUserEmail) {
+    //     if (ticket.asignadoA === currentUserEmail) {
+    //       this.ticketForm.get('titulo')?.disable();
+    //       this.ticketForm.get('descripcion')?.disable();
+    //       this.ticketForm.get('asignadoA')?.disable();
+    //       this.ticketForm.get('prioridad')?.disable();
+    //       this.ticketForm.get('fechaLimite')?.disable();
+    //     } else {
+    //       this.ticketForm.disable();
+    //       this.canEditTicket = false;
+    //     }
+    //   }
+    // }
+    // this.ticketDialog = true;
   }
 
   eliminarTicket(ticket: any) {
@@ -460,7 +472,7 @@ export class GroupDetail implements OnInit {
       rejectLabel: 'Cancelar',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.groupService.deleteTicket(this.grupoId!, ticket.id);
+        // this.groupService.deleteTicket(this.grupoId!, ticket.id);
         this.loadGroup();
         this.messageService.add({
           severity: 'success',
@@ -472,131 +484,117 @@ export class GroupDetail implements OnInit {
   }
 
   agregarComentario() {
-    const texto = this.ticketForm.get('nuevoComentario')?.value;
-    if (!texto || texto.trim() === '') return;
-
-    const currentUser = this.UsersService.getCurrentUser()?.nombreCompleto || 'Usuario';
-    const nuevoComentarioObj = {
-      autor: currentUser,
-      fecha: new Date(),
-      texto: texto.trim(),
-    };
-
-    this.currentTicket.comentariosList.push(nuevoComentarioObj);
-
-    const ticketToUpdate = { ...this.currentTicket };
-    this.groupService.updateTicket(this.grupoId!, ticketToUpdate);
-    this.loadGroup();
-
-    this.ticketForm.get('nuevoComentario')?.reset();
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Comentario añadido',
-      detail: 'Tu nota ha sido guardada.',
-    });
+    // const texto = this.ticketForm.get('nuevoComentario')?.value;
+    // if (!texto || texto.trim() === '') return;
+    // const currentUser = this.UsersService.getCurrentUser()?.nombreCompleto || 'Usuario';
+    // const nuevoComentarioObj = {
+    //   autor: currentUser,
+    //   fecha: new Date(),
+    //   texto: texto.trim(),
+    // };
+    // this.currentTicket.comentariosList.push(nuevoComentarioObj);
+    // const ticketToUpdate = { ...this.currentTicket };
+    // this.groupService.updateTicket(this.grupoId!, ticketToUpdate);
+    // this.loadGroup();
+    // this.ticketForm.get('nuevoComentario')?.reset();
+    // this.messageService.add({
+    //   severity: 'success',
+    //   summary: 'Comentario añadido',
+    //   detail: 'Tu nota ha sido guardada.',
+    // });
   }
 
   guardarTicket() {
-    if (this.ticketForm.invalid) {
-      this.ticketForm.markAllAsTouched();
-      return;
-    }
-
-    const formValue = this.ticketForm.getRawValue();
-    const currentUser = this.UsersService.getCurrentUser()?.nombreCompleto || 'Usuario';
-    const currentUserEmail = this.UsersService.getCurrentUser()?.email;
-    const fechaActual = new Date().toLocaleString();
-
-    if (
-      formValue.fechaLimite &&
-      formValue.fechaLimite < new Date(new Date().setHours(0, 0, 0, 0))
-    ) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'La fecha límite no puede ser anterior a la actual',
-        life: 3000,
-      });
-      return;
-    }
-    if (!this.estados.includes(formValue.estado)) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'El estado ingresado no es válido',
-        life: 3000,
-      });
-      return;
-    }
-    if (!this.prioridades.includes(formValue.prioridad)) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'La prioridad ingresada no es válida',
-        life: 3000,
-      });
-      return;
-    }
-    if (
-      formValue.asignadoA &&
-      formValue.asignadoA.trim() !== '' &&
-      !this.grupo.integrantesList.includes(formValue.asignadoA)
-    ) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'El usuario asignado no pertenece al grupo',
-        life: 3000,
-      });
-      return;
-    }
-
-    formValue.comentariosList = this.currentTicket?.comentariosList || [];
-
-    if (this.isEditTicketMode) {
-      const index = this.grupo.ticketsList.findIndex((t: any) => t.id === formValue.id);
-      const ticketAnterior = this.grupo.ticketsList[index];
-
-      let historial = [...(ticketAnterior.historial || [])];
-      let cambios = [];
-
-      if (ticketAnterior.estado !== formValue.estado)
-        cambios.push(`cambió el estado a '${formValue.estado}'`);
-      if (ticketAnterior.asignadoA !== formValue.asignadoA)
-        cambios.push(`reasignó la tarea a '${formValue.asignadoA || 'Nadie'}'`);
-      if (ticketAnterior.prioridad !== formValue.prioridad)
-        cambios.push(`cambió la prioridad a '${formValue.prioridad}'`);
-
-      if (cambios.length > 0) {
-        historial.push({
-          fecha: new Date(),
-          descripcion: `${currentUser} ${cambios.join(', ')}`,
-        });
-      }
-
-      formValue.historial = historial;
-      this.groupService.updateTicket(this.grupoId!, formValue);
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Ticket actualizado',
-      });
-    } else {
-      formValue.fechaCreacion = new Date();
-      formValue.autorEmail = currentUserEmail;
-      formValue.historial = [
-        {
-          fecha: new Date(),
-          descripcion: `${currentUser} creó el ticket`,
-        },
-      ];
-
-      this.groupService.addTicket(this.grupoId!, formValue);
-      this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Ticket creado' });
-    }
-
-    this.loadGroup();
-    this.ticketDialog = false;
+    // if (this.ticketForm.invalid) {
+    //   this.ticketForm.markAllAsTouched();
+    //   return;
+    // }
+    // const formValue = this.ticketForm.getRawValue();
+    // const currentUser = this.UsersService.getCurrentUser()?.nombreCompleto || 'Usuario';
+    // const currentUserEmail = this.UsersService.getCurrentUser()?.email;
+    // const fechaActual = new Date().toLocaleString();
+    // if (
+    //   formValue.fechaLimite &&
+    //   formValue.fechaLimite < new Date(new Date().setHours(0, 0, 0, 0))
+    // ) {
+    //   this.messageService.add({
+    //     severity: 'error',
+    //     summary: 'Error',
+    //     detail: 'La fecha límite no puede ser anterior a la actual',
+    //     life: 3000,
+    //   });
+    //   return;
+    // }
+    // if (!this.estados.includes(formValue.estado)) {
+    //   this.messageService.add({
+    //     severity: 'error',
+    //     summary: 'Error',
+    //     detail: 'El estado ingresado no es válido',
+    //     life: 3000,
+    //   });
+    //   return;
+    // }
+    // if (!this.prioridades.includes(formValue.prioridad)) {
+    //   this.messageService.add({
+    //     severity: 'error',
+    //     summary: 'Error',
+    //     detail: 'La prioridad ingresada no es válida',
+    //     life: 3000,
+    //   });
+    //   return;
+    // }
+    // if (
+    //   formValue.asignadoA &&
+    //   formValue.asignadoA.trim() !== '' &&
+    //   !this.grupo.integrantesList.includes(formValue.asignadoA)
+    // ) {
+    //   this.messageService.add({
+    //     severity: 'error',
+    //     summary: 'Error',
+    //     detail: 'El usuario asignado no pertenece al grupo',
+    //     life: 3000,
+    //   });
+    //   return;
+    // }
+    // formValue.comentariosList = this.currentTicket?.comentariosList || [];
+    // if (this.isEditTicketMode) {
+    //   const index = this.grupo.ticketsList.findIndex((t: any) => t.id === formValue.id);
+    //   const ticketAnterior = this.grupo.ticketsList[index];
+    //   let historial = [...(ticketAnterior.historial || [])];
+    //   let cambios = [];
+    //   if (ticketAnterior.estado !== formValue.estado)
+    //     cambios.push(`cambió el estado a '${formValue.estado}'`);
+    //   if (ticketAnterior.asignadoA !== formValue.asignadoA)
+    //     cambios.push(`reasignó la tarea a '${formValue.asignadoA || 'Nadie'}'`);
+    //   if (ticketAnterior.prioridad !== formValue.prioridad)
+    //     cambios.push(`cambió la prioridad a '${formValue.prioridad}'`);
+    //   if (cambios.length > 0) {
+    //     historial.push({
+    //       fecha: new Date(),
+    //       descripcion: `${currentUser} ${cambios.join(', ')}`,
+    //     });
+    //   }
+    //   formValue.historial = historial;
+    //   this.groupService.updateTicket(this.grupoId!, formValue);
+    //   this.messageService.add({
+    //     severity: 'success',
+    //     summary: 'Éxito',
+    //     detail: 'Ticket actualizado',
+    //   });
+    // } else {
+    //   formValue.fechaCreacion = new Date();
+    //   formValue.autorEmail = currentUserEmail;
+    //   formValue.historial = [
+    //     {
+    //       fecha: new Date(),
+    //       descripcion: `${currentUser} creó el ticket`,
+    //     },
+    //   ];
+    //   this.groupService.addTicket(this.grupoId!, formValue);
+    //   this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Ticket creado' });
+    // }
+    // this.loadGroup();
+    // this.ticketDialog = false;
   }
 
   getSeverityPorEstado(estado: string): any {

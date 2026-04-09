@@ -1,143 +1,121 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
+import { ApiResponse } from '../../interfaces/api-response.interface';
 
 @Injectable({
   providedIn: 'root',
 })
 export class GroupService {
-  private storageKey = 'erp_grupos';
+  private http = inject(HttpClient);
+  private apiUrl = environment.apiUrl;
 
   constructor() {
     this.initGroups();
   }
 
-  private initGroups() {
-    const stored = localStorage.getItem(this.storageKey);
-    if (!stored) {
-      const defaultGroups = [
-        {
-          id: 1,
-          nivel: 'Avanzado',
-          autor: 'Administrador del Sistema',
-          nombre: 'Desarrollo Frontend',
-          integrantesList: ['admin@nexoserp.com'],
-          ticketsList: [],
-          descripcion: 'Equipo encargado de Angular',
-          memberPermissions: {
-            'admin@nexoserp.com': ['ticket:view', 'ticket:add', 'ticket:edit', 'ticket:delete'],
-          },
-        },
-      ];
-      this.saveToStorage(defaultGroups);
-    }
-  }
+  private initGroups() {}
 
-  private saveToStorage(groups: any[]) {
-    localStorage.setItem(this.storageKey, JSON.stringify(groups));
-  }
+  // Grupos
+  // ----- Obtener Grupos -----
+  getGroups(page: number = 1, limit: number = 5, search?: string): Observable<ApiResponse<any>> {
+    let params = new HttpParams().set('page', page).set('limit', limit);
 
-  getGroups(): any[] {
-    const stored = localStorage.getItem(this.storageKey);
-    return stored ? JSON.parse(stored) : [];
-  }
-
-  getGroupById(id: number): any {
-    const groups = this.getGroups();
-    return groups.find((g) => g.id === id) || null;
-  }
-
-  createGroup(group: any): any {
-    const groups = this.getGroups();
-    group.id = groups.length > 0 ? Math.max(...groups.map((g: any) => g.id)) + 1 : 1;
-
-    if (group.integrantesList && group.integrantesList.length > 0) {
-      const creadorEmail = group.integrantesList[0];
-      group.memberPermissions = {
-        [creadorEmail]: ['ticket:view', 'ticket:add', 'ticket:edit', 'ticket:delete'],
-      };
+    if (search) {
+      params = params.set('search', search);
     }
 
-    groups.push(group);
-    this.saveToStorage(groups);
-    return group;
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/api/groups`, { params });
   }
 
-  updateGroup(updatedGroup: any): void {
-    const groups = this.getGroups();
-    const index = groups.findIndex((g) => g.id === updatedGroup.id);
-    if (index !== -1) {
-      groups[index] = updatedGroup;
-      this.saveToStorage(groups);
-    }
+  // ----- Crear Grupo -----
+  createGroup(groupData: {
+    nombre: string;
+    descripcion: string;
+    nivel: string;
+  }): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl}/api/groups`, groupData);
   }
 
-  deleteGroup(id: number): void {
-    let groups = this.getGroups();
-    groups = groups.filter((g) => g.id !== id);
-    this.saveToStorage(groups);
+  // ----- Actualizar Grupo -----
+  updateGroup(
+    groupId: string,
+    groupData: { nombre: string; descripcion: string; nivel: string },
+  ): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/api/groups/${groupId}`, groupData);
   }
 
-  addMember(groupId: number, email: string): void {
-    const group = this.getGroupById(groupId);
-    if (group) {
-      if (!group.integrantesList) group.integrantesList = [];
-      if (!group.integrantesList.includes(email)) {
-        group.integrantesList.push(email);
-
-        if (!group.memberPermissions) group.memberPermissions = {};
-
-        group.memberPermissions[email] = [
-          'ticket:view',
-          'ticket:add',
-          'ticket:edit',
-          'ticket:delete',
-        ];
-
-        this.updateGroup(group);
-      }
-    }
+  // ----- Eliminar Grupo -----
+  deleteGroup(groupId: string): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.apiUrl}/api/groups/${groupId}`);
   }
 
-  removeMember(groupId: number, email: string): void {
-    const group = this.getGroupById(groupId);
-    if (group && group.integrantesList) {
-      group.integrantesList = group.integrantesList.filter((e: string) => e !== email);
+  // ----- Obtener Grupo por ID -----
+  getGroupById(groupId: string): Observable<ApiResponse<any>> {
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/api/groups/${groupId}`);
+  }
 
-      if (group.memberPermissions && group.memberPermissions[email]) {
-        delete group.memberPermissions[email];
-      }
+  // Gestión de Grupo
+  // ----- Obtener Miembros -----
+  getGroupMembers(groupId: string): Observable<ApiResponse<any>> {
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/api/groups/${groupId}/members`);
+  }
 
-      this.updateGroup(group);
-    }
+  // ----- Agregar Miembro -----
+  addGroupMember(groupId: string, email: string): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl}/api/groups/${groupId}/members`, {
+      email,
+    });
+  }
+
+  // ----- Actualizar Permisos Locales -----
+  updateMemberPermissions(
+    groupId: string,
+    userId: string,
+    permissions: string[],
+  ): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(
+      `${this.apiUrl}/api/groups/${groupId}/members/${userId}/permissions`,
+      { permissions },
+    );
+  }
+
+  // ----- Remover Miembro -----
+  removeMember(groupId: string, userId: string): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(
+      `${this.apiUrl}/api/groups/${groupId}/members/${userId}`,
+    );
   }
 
   addTicket(groupId: number, ticket: any): void {
-    const group = this.getGroupById(groupId);
-    if (group) {
-      if (!group.ticketsList) group.ticketsList = [];
-      ticket.id =
-        group.ticketsList.length > 0 ? Math.max(...group.ticketsList.map((t: any) => t.id)) + 1 : 1;
-      group.ticketsList.push(ticket);
-      this.updateGroup(group);
-    }
+    // const group = this.getGroupById(groupId);
+    // if (group) {
+    //   if (!group.ticketsList) group.ticketsList = [];
+    //   ticket.id =
+    //     group.ticketsList.length > 0 ? Math.max(...group.ticketsList.map((t: any) => t.id)) + 1 : 1;
+    //   group.ticketsList.push(ticket);
+    //   // this.updateGroup(group);
+    // }
   }
 
   updateTicket(groupId: number, updatedTicket: any): void {
-    const group = this.getGroupById(groupId);
-    if (group && group.ticketsList) {
-      const index = group.ticketsList.findIndex((t: any) => t.id === updatedTicket.id);
-      if (index !== -1) {
-        group.ticketsList[index] = updatedTicket;
-        this.updateGroup(group);
-      }
-    }
+    // const group = this.getGroupById(groupId);
+    // if (group && group.ticketsList) {
+    //   const index = group.ticketsList.findIndex((t: any) => t.id === updatedTicket.id);
+    //   if (index !== -1) {
+    //     group.ticketsList[index] = updatedTicket;
+    //     // this.updateGroup(group);
+    //   }
+    // }
   }
 
   deleteTicket(groupId: number, ticketId: number): void {
-    const group = this.getGroupById(groupId);
-    if (group && group.ticketsList) {
-      group.ticketsList = group.ticketsList.filter((t: any) => t.id !== ticketId);
-      this.updateGroup(group);
-    }
+    // const group = this.getGroupById(groupId);
+    // if (group && group.ticketsList) {
+    //   group.ticketsList = group.ticketsList.filter((t: any) => t.id !== ticketId);
+    //   // this.updateGroup(group);
+    // }
   }
 
   getUserTickets(email: string): any[] {
@@ -168,29 +146,31 @@ export class GroupService {
   }
 
   getGroupTicketsFiltered(groupId: number, filterType: string, userEmail: string): any[] {
-    const group = this.getGroupById(groupId);
-    if (!group || !group.ticketsList) return [];
+    // const group = this.getGroupById(groupId);
+    // if (!group || !group.ticketsList) return [];
 
-    let tickets = group.ticketsList;
+    // let tickets = group.ticketsList;
 
-    switch (filterType) {
-      case 'mis_tickets':
-        return tickets.filter((t: any) => t.asignadoA === userEmail);
-      case 'sin_asignar':
-        return tickets.filter((t: any) => !t.asignadoA || t.asignadoA.trim() === '');
-      case 'prioridad_alta':
-        return tickets.filter((t: any) => t.prioridad === 'Alta');
-      case 'todos':
-      default:
-        return tickets;
-    }
+    // switch (filterType) {
+    //   case 'mis_tickets':
+    //     return tickets.filter((t: any) => t.asignadoA === userEmail);
+    //   case 'sin_asignar':
+    //     return tickets.filter((t: any) => !t.asignadoA || t.asignadoA.trim() === '');
+    //   case 'prioridad_alta':
+    //     return tickets.filter((t: any) => t.prioridad === 'Alta');
+    //   case 'todos':
+    //   default:
+    //     return tickets;
+    // }
+    return [];
   }
 
   getUserGroups(email: string): any[] {
     const groups = this.getGroups();
-    return groups.filter(
-      (g) => g.integrantesList && g.integrantesList.includes(email?.toLowerCase()),
-    );
+    // return groups.filter(
+    //   (g) => g.integrantesList && g.integrantesList.includes(email?.toLowerCase()),
+    // );
+    return [];
   }
 
   getTicketStats(email?: string): {
@@ -202,14 +182,14 @@ export class GroupService {
   } {
     let groups = this.getGroups();
 
-    if (email) {
-      groups = groups.filter(
-        (g) =>
-          g.integrantesList &&
-          g.integrantesList.includes(email.toLowerCase()) &&
-          this.hasLocalPermission(g.id, email.toLowerCase(), 'ticket:view'),
-      );
-    }
+    // if (email) {
+    //   groups = groups.filter(
+    //     (g) =>
+    //       g.integrantesList &&
+    //       g.integrantesList.includes(email.toLowerCase()) &&
+    //       this.hasLocalPermission(g.id, email.toLowerCase(), 'ticket:view'),
+    //   );
+    // }
 
     let stats = { total: 0, pendientes: 0, enProgreso: 0, enRevision: 0, finalizados: 0 };
 
@@ -227,33 +207,23 @@ export class GroupService {
   }
 
   getGroupTicketStats(groupId: number): any {
-    const group = this.getGroupById(groupId);
-    let stats = { total: 0, pendientes: 0, enProgreso: 0, enRevision: 0, finalizados: 0 };
-
-    if (group && group.ticketsList) {
-      stats.total = group.ticketsList.length;
-      stats.pendientes = group.ticketsList.filter((t: any) => t.estado === 'Pendiente').length;
-      stats.enProgreso = group.ticketsList.filter((t: any) => t.estado === 'En Progreso').length;
-      stats.enRevision = group.ticketsList.filter((t: any) => t.estado === 'Revisión').length;
-      stats.finalizados = group.ticketsList.filter((t: any) => t.estado === 'Finalizado').length;
-    }
-    return stats;
+    // const group = this.getGroupById(groupId);
+    // let stats = { total: 0, pendientes: 0, enProgreso: 0, enRevision: 0, finalizados: 0 };
+    // if (group && group.ticketsList) {
+    //   stats.total = group.ticketsList.length;
+    //   stats.pendientes = group.ticketsList.filter((t: any) => t.estado === 'Pendiente').length;
+    //   stats.enProgreso = group.ticketsList.filter((t: any) => t.estado === 'En Progreso').length;
+    //   stats.enRevision = group.ticketsList.filter((t: any) => t.estado === 'Revisión').length;
+    //   stats.finalizados = group.ticketsList.filter((t: any) => t.estado === 'Finalizado').length;
+    // }
+    // return stats;
   }
 
   hasLocalPermission(groupId: number, email: string, permission: string): boolean {
-    const group = this.getGroupById(groupId);
-    if (!group || !group.memberPermissions || !group.memberPermissions[email]) {
-      return false;
-    }
-    return group.memberPermissions[email].includes(permission);
-  }
-
-  updateMemberPermissions(groupId: number, email: string, permissions: string[]): void {
-    const group = this.getGroupById(groupId);
-    if (group) {
-      if (!group.memberPermissions) group.memberPermissions = {};
-      group.memberPermissions[email] = permissions;
-      this.updateGroup(group);
-    }
+    // const group = this.getGroupById(groupId);
+    // if (!group || !group.memberPermissions || !group.memberPermissions[email]) {
+    //   return false;
+    // }
+    return true;
   }
 }
