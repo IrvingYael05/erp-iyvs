@@ -106,42 +106,4 @@ export class GroupService {
   getMyGroups(): Observable<ApiResponse<any>> {
     return this.http.get<ApiResponse<any>>(`${this.apiUrl}/api/groups/me`);
   }
-
-  // Se usa en Perfil
-  getUserTickets(email: string): any[] {
-    const groups = this.getGroups();
-    let userTickets: any[] = [];
-
-    groups.forEach((g: any) => {
-      if (g.ticketsLis) {
-        const tickets = g.ticketsList.filter((t: any) => t.asignadoA === email);
-        tickets.forEach((t: any) =>
-          userTickets.push({ ...t, grupoNombre: g.nombre, grupoId: g.id }),
-        );
-      }
-    });
-
-    return userTickets;
-  }
-
-  // Se usa en Perfil
-  getUserTicketStats(email: string): any {
-    const tickets = this.getUserTickets(email);
-    return {
-      total: tickets.length,
-      abiertos: tickets.filter((t) => t.estado === 'Pendiente').length,
-      enProgreso: tickets.filter((t) => t.estado === 'En Progreso').length,
-      revision: tickets.filter((t) => t.estado === 'Revisión').length,
-      hechos: tickets.filter((t) => t.estado === 'Finalizado').length,
-    };
-  }
-
-  // Se usa en Home
-  getUserGroups(email: string): any[] {
-    const groups = this.getGroups();
-    // return groups.filter(
-    //   (g) => g.integrantesList && g.integrantesList.includes(email?.toLowerCase()),
-    // );
-    return [];
-  }
 }

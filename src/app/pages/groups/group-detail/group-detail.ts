@@ -172,6 +172,19 @@ export class GroupDetail implements OnInit {
         this.isLoading = false;
         if (res.data && res.data[0]) {
           this.grupo = res.data[0];
+
+          const isMember = this.grupo.integrantesList?.includes(this.currentUserEmail);
+
+          if (!isMember) {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Acceso Denegado',
+              detail: 'No perteneces a este grupo o fuiste removido por un administrador.',
+            });
+            this.backToMain();
+            return;
+          }
+          
           this.loadDashboard();
           this.loadMyLocalPermissions();
         }
