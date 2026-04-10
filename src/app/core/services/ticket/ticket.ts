@@ -66,4 +66,9 @@ export class TicketService {
       estado,
     });
   }
+
+  // ----- Obtener Mis Tickets -----
+  getMyTickets(): Observable<ApiResponse<any>> {
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/api/tickets/me`);
+  }
 }

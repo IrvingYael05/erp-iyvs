@@ -130,6 +130,7 @@ export class GroupDetail implements OnInit {
     return this.usersService.getCurrentUser()?.email || '';
   }
 
+  isLoadingGlobal = true;
   isLoading = true;
   isSaving = false;
 
@@ -146,11 +147,15 @@ export class GroupDetail implements OnInit {
   isCommenting = false;
 
   ngOnInit() {
+    this.isLoadingGlobal = true;
     this.route.paramMap.subscribe((params) => {
       this.grupoId = params.get('id');
 
       if (this.grupoId) {
         this.loadGroup();
+        setTimeout(() => {
+          this.isLoadingGlobal = false;
+        }, 1000);
       } else {
         this.backToMain();
       }
@@ -388,7 +393,7 @@ export class GroupDetail implements OnInit {
     this.ticketForm.markAllAsTouched();
 
     this.isSaving = true;
-    const formValue = this.ticketForm.value;
+    const formValue = this.ticketForm.getRawValue();
 
     const ticketPayload = {
       grupoId: this.grupoId,
@@ -652,10 +657,24 @@ export class GroupDetail implements OnInit {
             nuevoComentario: '',
           });
 
-          if (!this.hasLocalPerm('edit')) {
+          const isAssigned = this.currentTicket.asignadoA === this.currentUserEmail;
+          const hasEditPerm = this.hasLocalPerm('edit');
+
+          if (hasEditPerm) {
+            this.ticketForm.enable();
+            this.canEditTicket = true;
+          } else if (isAssigned) {
+            this.ticketForm.disable();
+            this.ticketForm.get('prioridad')?.enable();
+            this.ticketForm.get('estado')?.enable();
+            this.ticketForm.get('nuevoComentario')?.enable();
+            this.canEditTicket = true;
+          } else {
             this.ticketForm.disable();
             this.canEditTicket = false;
           }
+
+          this.ticketDialog = true;
 
           this.ticketDialog = true;
           this.cdr.detectChanges();
@@ -708,11 +727,13 @@ export class GroupDetail implements OnInit {
     if (!this.draggedTicket) return;
     this.loadingTicketId = this.draggedTicket.id;
 
-    if (!this.hasLocalPerm('edit')) {
+    const isAssigned = this.draggedTicket.asignadoA === this.currentUserEmail;
+
+    if (!this.hasLocalPerm('edit') && !isAssigned) {
       this.messageService.add({
         severity: 'error',
         summary: 'Acceso Denegado',
-        detail: 'No tienes permiso para cambiar el estado de los tickets.',
+        detail: 'Solo puedes mover los tickets que tienes asignados.',
       });
       this.draggedTicket = null;
       this.loadingTicketId = null;

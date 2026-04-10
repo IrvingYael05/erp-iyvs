@@ -1,8 +1,8 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MainLayout } from '../../layout/main-layout/main-layout';
 import { UsersService } from '../../core/services/users/users';
-import { GroupService } from '../../core/services/group/group';
+import { TicketService } from '../../core/services/ticket/ticket';
 import { CardModule } from 'primeng/card';
 import { AvatarModule } from 'primeng/avatar';
 import { DividerModule } from 'primeng/divider';
@@ -71,14 +71,17 @@ function passwordMatchValidator(group: AbstractControl): ValidationErrors | null
   styleUrl: './user.scss',
 })
 export class User implements OnInit {
-  private UsersService = inject(UsersService);
-  private groupService = inject(GroupService);
+  private usersService = inject(UsersService);
+  private ticketService = inject(TicketService);
   private fb = inject(FormBuilder);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
-  userData = this.UsersService.getCurrentUser();
+  isLoadingGlobal: boolean = true;
+
+  userData = this.usersService.getCurrentUser();
   profileForm!: FormGroup;
 
   minDate: Date = new Date();
@@ -94,6 +97,7 @@ export class User implements OnInit {
   isDeleteLoading = false;
 
   ngOnInit() {
+    this.isLoadingGlobal = true;
     this.profileForm = this.fb.group({
       email: [{ value: '', disabled: true }],
       nombreCompleto: ['', [Validators.required, Validators.minLength(5)]],
@@ -102,7 +106,7 @@ export class User implements OnInit {
       fechaNacimiento: [null, [Validators.required, ageValidator]],
     });
 
-    this.UsersService.currentUser$.subscribe((user) => {
+    this.usersService.currentUser$.subscribe((user) => {
       if (user) {
         this.userData = user;
 
@@ -133,6 +137,11 @@ export class User implements OnInit {
       },
       { validators: passwordMatchValidator },
     );
+
+    setTimeout(() => {
+      this.isLoadingGlobal = false;
+      this.cdr.detectChanges();
+    }, 1000);
   }
 
   abrirModalPassword() {
@@ -149,7 +158,7 @@ export class User implements OnInit {
     this.isPasswordLoading = true;
     const { oldPassword, newPassword } = this.passwordForm.value;
 
-    this.UsersService.changePassword(oldPassword, newPassword).subscribe({
+    this.usersService.changePassword(oldPassword, newPassword).subscribe({
       next: (res) => {
         this.isPasswordLoading = false;
         this.passwordDialog = false;
@@ -171,10 +180,24 @@ export class User implements OnInit {
   }
 
   cargarDatosLaborales() {
-    if (this.userData?.email) {
-      this.misTickets = this.groupService.getUserTickets(this.userData.email);
-      this.misEstadisticas = this.groupService.getUserTicketStats(this.userData.email);
-    }
+    this.ticketService.getMyTickets().subscribe({
+      next: (res) => {
+        const tickets = res.data[0]?.tickets ?? [];
+        this.misTickets = tickets;
+
+        this.misEstadisticas = {
+          total: tickets.length,
+          abiertos: tickets.filter((t: any) => t.estado === 'Pendiente').length,
+          enProgreso: tickets.filter((t: any) => t.estado === 'En Progreso').length,
+          revision: tickets.filter((t: any) => t.estado === 'Revisión').length,
+          hechos: tickets.filter((t: any) => t.estado === 'Finalizado').length,
+        };
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error al cargar mis datos laborales', err);
+      },
+    });
   }
 
   onUpdateProfile() {
@@ -184,22 +207,25 @@ export class User implements OnInit {
       const { nombreCompleto, direccion, telefono, fechaNacimiento } =
         this.profileForm.getRawValue();
 
-      this.UsersService
-        .updateProfile({ nombreCompleto, direccion, telefono, fechaNacimiento })
-        .subscribe({
-          next: (res) => {
-            this.isProfileLoading = false;
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Perfil Actualizado',
-              detail: res.data[0].message || 'Tus datos han sido actualizados.',
-            });
-            this.profileForm.markAsPristine();
-          },
-          error: (err) => {
-            this.isProfileLoading = false;
-          },
-        });
+      this.usersService.updateProfile({
+        nombreCompleto,
+        direccion,
+        telefono,
+        fechaNacimiento,
+      }).subscribe({
+        next: (res) => {
+          this.isProfileLoading = false;
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Perfil Actualizado',
+            detail: res.data[0].message || 'Tus datos han sido actualizados.',
+          });
+          this.profileForm.markAsPristine();
+        },
+        error: (err) => {
+          this.isProfileLoading = false;
+        },
+      });
     } else {
       this.profileForm.markAllAsTouched();
     }
@@ -214,7 +240,7 @@ export class User implements OnInit {
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
         this.isDeleteLoading = true;
-        this.UsersService.deleteAccount().subscribe({
+        this.usersService.deleteAccount().subscribe({
           next: (res) => {
             this.messageService.add({
               severity: 'success',
@@ -232,7 +258,7 @@ export class User implements OnInit {
     });
   }
 
-  irAlGrupo(grupoId: number) {
+  irAlGrupo(grupoId: string) {
     this.router.navigate(['/group', grupoId]);
   }
 

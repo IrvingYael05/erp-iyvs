@@ -69,12 +69,20 @@ export class Group implements OnInit {
   selectedGroupId: string | null = null;
   totalRecords = 0;
 
+  isLoadingGlobal: boolean = true;
+
   searchNivel(event: any) {
     const query = event.query.toLowerCase();
     this.filteredNiveles = this.niveles.filter((n) => n.toLowerCase().includes(query));
   }
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.isLoadingGlobal = true;
+    setTimeout(() => {
+      this.isLoadingGlobal = false;
+      this.cdr.detectChanges();
+    }, 1000);
+  }
 
   // ----- Cargar Grupos desde el Backend -----
   loadGroups(event?: TableLazyLoadEvent) {

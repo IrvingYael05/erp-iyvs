@@ -2,7 +2,17 @@
 <p-confirmDialog></p-confirmDialog>
 
 <app-main-layout pageTitle="Configuración de Perfil">
-  <div class="max-w-5xl mx-auto space-y-6">
+  <div *ngIf="isLoadingGlobal" class="flex justify-center items-center h-full w-full">
+    <div class="relative w-12 h-12">
+      <div class="absolute inset-0 rounded-full border-4 border-slate-200"></div>
+      <div
+        class="absolute inset-0 rounded-full border-4 border-transparent border-t-[var(--p-primary)] animate-spin"
+        style="animation-duration: 0.5s"
+      ></div>
+    </div>
+  </div>
+
+  <div *ngIf="!isLoadingGlobal" class="max-w-5xl mx-auto space-y-6">
     <p-card styleClass="shadow-sm border border-slate-200" header="Mi Carga de Trabajo">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div

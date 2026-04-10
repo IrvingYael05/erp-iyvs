@@ -2,7 +2,17 @@
 <p-confirmDialog></p-confirmDialog>
 
 <app-main-layout pageTitle="Gestión de Usuarios">
-  <div class="card bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+  <div *ngIf="isLoadingGlobal" class="flex justify-center items-center h-full w-full">
+    <div class="relative w-12 h-12">
+      <div class="absolute inset-0 rounded-full border-4 border-slate-200"></div>
+      <div
+        class="absolute inset-0 rounded-full border-4 border-transparent border-t-[var(--p-primary)] animate-spin"
+        style="animation-duration: 0.5s"
+      ></div>
+    </div>
+  </div>
+  
+  <div *ngIf="!isLoadingGlobal" class="card bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
     <p-table
       #dtUsers
       [value]="users"

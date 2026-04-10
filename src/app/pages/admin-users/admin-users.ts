@@ -91,7 +91,15 @@ export class AdminUsers implements OnInit {
     { key: 'delete', label: 'Eliminar' },
   ];
 
-  ngOnInit() {}
+  isLoadingGlobal: boolean = true;
+
+  ngOnInit() {
+    this.isLoadingGlobal = true;
+    setTimeout(() => {
+      this.isLoadingGlobal = false;
+      this.cdr.detectChanges();
+    }, 1000);
+  }
 
   loadUsers(event?: TableLazyLoadEvent) {
     this.isLoading = true;

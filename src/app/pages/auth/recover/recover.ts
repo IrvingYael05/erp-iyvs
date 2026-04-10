@@ -8,6 +8,7 @@ import { MessageService } from 'primeng/api';
 import { UsersService } from '../../../core/services/users/users';
 import { CardModule } from 'primeng/card';
 import { Divider } from 'primeng/divider';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-recover',
@@ -20,6 +21,7 @@ import { Divider } from 'primeng/divider';
     ToastModule,
     CardModule,
     Divider,
+    CommonModule,
   ],
   providers: [MessageService],
   templateUrl: './recover.html',
