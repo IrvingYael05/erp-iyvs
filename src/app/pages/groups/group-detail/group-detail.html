@@ -1,6 +1,7 @@
 <p-toast></p-toast>
 <p-confirmDialog></p-confirmDialog>
 
+<!-- Contendor Principal -->
 <app-main-layout [pageTitle]="'Gestión: ' + (grupo?.nombre || 'Grupo')">
   <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -17,7 +18,7 @@
         icon="pi pi-arrow-left"
         severity="secondary"
         [text]="true"
-        (onClick)="volverDirectorio()"
+        (onClick)="backToMain()"
       ></p-button>
     </div>
   </div>
@@ -30,6 +31,7 @@
         <p-tab value="2" *appHasPermission="'group-detail:view'">Integrantes</p-tab>
       </p-tablist>
 
+      <!-- Pestañas de Contenido -->
       <p-tabpanels>
         <!--Apartado de Dashboard-->
         <p-tabpanel value="0" *appHasPermission="'group-detail:view'">
@@ -42,25 +44,33 @@
               <div
                 class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center shadow-sm"
               >
-                <span class="text-3xl font-bold text-slate-700">{{ groupStats?.pendientes ?? "NA" }}</span>
+                <span class="text-3xl font-bold text-slate-700">{{
+                  groupStats?.pendientes ?? 'NA'
+                }}</span>
                 <span class="text-sm text-slate-500 font-medium mt-1">Pendientes</span>
               </div>
               <div
                 class="bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col items-center justify-center text-center shadow-sm"
               >
-                <span class="text-3xl font-bold text-blue-700">{{ groupStats?.enProgreso ?? "NA" }}</span>
+                <span class="text-3xl font-bold text-blue-700">{{
+                  groupStats?.enProgreso ?? 'NA'
+                }}</span>
                 <span class="text-sm text-blue-600 font-medium mt-1">En Progreso</span>
               </div>
               <div
                 class="bg-orange-50 p-4 rounded-xl border border-orange-100 flex flex-col items-center justify-center text-center shadow-sm"
               >
-                <span class="text-3xl font-bold text-orange-700">{{ groupStats?.enRevision ?? "NA" }}</span>
+                <span class="text-3xl font-bold text-orange-700">{{
+                  groupStats?.enRevision ?? 'NA'
+                }}</span>
                 <span class="text-sm text-orange-600 font-medium mt-1">En Revisión</span>
               </div>
               <div
                 class="bg-green-50 p-4 rounded-xl border border-green-100 flex flex-col items-center justify-center text-center shadow-sm"
               >
-                <span class="text-3xl font-bold text-green-700">{{ groupStats?.finalizados ?? "NA" }}</span>
+                <span class="text-3xl font-bold text-green-700">{{
+                  groupStats?.finalizados ?? 'NA'
+                }}</span>
                 <span class="text-sm text-green-600 font-medium mt-1">Hechos</span>
               </div>
             </div>
@@ -213,6 +223,10 @@
               [rows]="5"
               [globalFilterFields]="['titulo', 'asignadoA']"
               [rowHover]="true"
+              [lazy]="true"
+              (onLazyLoad)="loadTickets($event)"
+              [totalRecords]="totalTickets"
+              [loading]="isTicketsLoading"
               styleClass="p-datatable-sm"
             >
               <ng-template pTemplate="header">
@@ -256,6 +270,7 @@
                       icon="pi pi-pencil"
                       [rounded]="true"
                       [text]="true"
+                      [loading]="loadingTicketId === ticket.id"
                       severity="info"
                       (onClick)="editarTicket(ticket)"
                     ></p-button>
@@ -284,62 +299,101 @@
             *ngIf="vistaTickets === 'kanban'"
             class="flex overflow-x-auto gap-6 pb-4 kanban-container min-h-[500px]"
           >
-            <div
-              *ngFor="let estado of estados"
-              pDroppable="tickets"
-              (onDrop)="drop(estado)"
-              class="flex-none w-80 bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col h-full transition-colors"
-            >
-              <h3 class="font-bold text-slate-700 mb-4 flex items-center justify-between">
-                {{ estado }}
-                <span
-                  class="bg-white text-slate-500 text-xs px-2 py-1 rounded-full border border-slate-200 shadow-sm"
-                  >{{ getTicketsPorEstado(estado).length }}</span
-                >
-              </h3>
-
-              <div class="flex flex-col gap-3 flex-1">
+            <div *ngIf="isTicketsLoading" class="flex justify-center items-center py-20 w-full">
+              <div class="relative w-12 h-12">
+                <div class="absolute inset-0 rounded-full border-4 border-slate-200"></div>
                 <div
-                  *ngFor="let ticket of getTicketsPorEstado(estado)"
-                  pDraggable="tickets"
-                  (onDragStart)="dragStart(ticket)"
-                  (onDragEnd)="dragEnd()"
-                  (click)="editarTicket(ticket)"
-                  class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
-                >
-                  <div class="flex justify-between items-start mb-2">
-                    <p-tag
-                      [value]="ticket.prioridad"
-                      [severity]="getSeverityPorPrioridad(ticket.prioridad)"
-                      styleClass="text-xs"
-                    ></p-tag>
-                    <i class="pi pi-ellipsis-v text-slate-400"></i>
-                  </div>
-                  <h4 class="font-bold text-slate-800 m-0 mb-1 leading-tight">
-                    {{ ticket.titulo }}
-                  </h4>
-                  <p class="text-xs text-slate-500 mb-3 line-clamp-2">{{ ticket.descripcion }}</p>
-                  <div
-                    class="flex justify-between items-center text-xs text-slate-500 border-t border-slate-100 pt-2"
+                  class="absolute inset-0 rounded-full border-4 border-transparent border-t-[var(--p-primary)] animate-spin"
+                  style="animation-duration: 0.5s"
+                ></div>
+              </div>
+            </div>
+            <div *ngFor="let estado of estados">
+              <div
+                *ngIf="!isTicketsLoading"
+                pDroppable="tickets"
+                (onDrop)="drop(estado)"
+                class="flex-none w-80 bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col h-full transition-colors"
+              >
+                <h3 class="font-bold text-slate-700 mb-4 flex items-center justify-between">
+                  {{ estado }}
+                  <span
+                    class="bg-white text-slate-500 text-xs px-2 py-1 rounded-full border border-slate-200 shadow-sm"
+                    >{{ getTicketsPorEstado(estado).length }}</span
                   >
-                    <span class="flex items-center gap-1" title="Asignado a"
-                      ><i class="pi pi-user"></i>
-                      {{ (ticket.asignadoA | slice: 0 : 15) || 'Sin Asignar' }}</span
-                    >
-                    <span class="flex items-center gap-1 text-red-500"
-                      ><i class="pi pi-calendar"></i> {{ ticket.fechaLimite | date: 'dd/MM' }}</span
-                    >
-                  </div>
-                </div>
+                </h3>
 
-                <div
-                  *ngIf="getTicketsPorEstado(estado).length === 0"
-                  class="flex-1 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-sm p-4 text-center min-h-[100px]"
-                >
-                  Soltar tickets aquí
+                <div class="flex flex-col gap-3 flex-1">
+                  <div
+                    *ngFor="let ticket of getTicketsPorEstado(estado)"
+                    pDraggable="tickets"
+                    (onDragStart)="dragStart(ticket)"
+                    (onDragEnd)="dragEnd()"
+                    (click)="editarTicket(ticket)"
+                    class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
+                  >
+                    <div
+                      *ngIf="loadingTicketId === ticket.id"
+                      class="flex justify-center items-center py-7 w-full"
+                    >
+                      <div class="relative w-12 h-12">
+                        <div class="absolute inset-0 rounded-full border-4 border-slate-200"></div>
+                        <div
+                          class="absolute inset-0 rounded-full border-4 border-transparent border-t-[var(--p-primary)] animate-spin"
+                          style="animation-duration: 0.5s"
+                        ></div>
+                      </div>
+                    </div>
+                    <div *ngIf="loadingTicketId !== ticket.id">
+                      <div class="flex justify-between items-start mb-2">
+                        <p-tag
+                          [value]="ticket.prioridad"
+                          [severity]="getSeverityPorPrioridad(ticket.prioridad)"
+                          styleClass="text-xs"
+                        ></p-tag>
+                        <i class="pi pi-ellipsis-v text-slate-400"></i>
+                      </div>
+                      <h4 class="font-bold text-slate-800 m-0 mb-1 leading-tight">
+                        {{ ticket.titulo }}
+                      </h4>
+                      <p class="text-xs text-slate-500 mb-3 line-clamp-2">
+                        {{ ticket.descripcion }}
+                      </p>
+                      <div
+                        class="flex justify-between items-center text-xs text-slate-500 border-t border-slate-100 pt-2"
+                      >
+                        <span class="flex items-center gap-1" title="Asignado a"
+                          ><i class="pi pi-user"></i>
+                          {{ (ticket.asignadoA | slice: 0 : 15) || 'Sin Asignar' }}</span
+                        >
+                        <span class="flex items-center gap-1 text-red-500"
+                          ><i class="pi pi-calendar"></i>
+                          {{ ticket.fechaLimite | date: 'dd/MM' }}</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    *ngIf="getTicketsPorEstado(estado).length === 0"
+                    class="flex-1 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-sm p-4 text-center min-h-[100px]"
+                  >
+                    Soltar tickets aquí
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
+          <div *ngIf="totalTickets > ticketsList.length" class="flex justify-center mt-6 mb-4">
+            <p-button
+              label="Cargar más tickets ({{ ticketsList.length }} de {{ totalTickets }})"
+              icon="pi pi-refresh"
+              severity="secondary"
+              [outlined]="true"
+              [loading]="isTicketsLoading"
+              (onClick)="cargarMasKanban()"
+            >
+            </p-button>
           </div>
         </p-tabpanel>
 
@@ -350,6 +404,10 @@
             [value]="integrantesObjList"
             [paginator]="true"
             [rows]="5"
+            [lazy]="true"
+            (onLazyLoad)="loadMembers($event)"
+            [totalRecords]="totalMembers"
+            [loading]="isMembersLoading"
             [globalFilterFields]="['email']"
             [rowHover]="true"
             dataKey="email"
@@ -359,7 +417,7 @@
                 <div class="flex items-center gap-2">
                   <form
                     [formGroup]="integranteForm"
-                    (ngSubmit)="agregarIntegrante()"
+                    (ngSubmit)="addMember()"
                     class="flex flex-col sm:flex-row gap-3 mb-6 mt-2"
                   >
                     <div class="flex-1 max-w-md" *appHasPermission="'group-detail:add'">
@@ -385,6 +443,7 @@
                       label="Añadir al grupo"
                       icon="pi pi-plus"
                       type="submit"
+                      [loading]="isSaving"
                       [disabled]="integranteForm.invalid"
                     ></p-button>
                   </form>
@@ -430,7 +489,7 @@
                     [text]="true"
                     severity="info"
                     pTooltip="Permisos de Tickets"
-                    (onClick)="abrirModalPermisos(item.email)"
+                    (onClick)="openModalPermissions(item)"
                   ></p-button>
 
                   <p-button
@@ -440,7 +499,7 @@
                     [text]="true"
                     severity="danger"
                     pTooltip="Eliminar integrante"
-                    (onClick)="eliminarIntegrante(item.email)"
+                    (onClick)="deleteMember(item)"
                   ></p-button>
                 </td>
               </tr>
@@ -505,7 +564,21 @@
                       formControlName="asignadoA"
                       placeholder="Sin Asignar"
                       appendTo="body"
-                    ></p-autoComplete>
+                      optionLabel="email"
+                      [forceSelection]="true"
+                    >
+                      <ng-template let-member pTemplate="item">
+                        <div class="flex items-center gap-2">
+                          <i class="pi pi-user text-slate-500"></i>
+                          <div>
+                            <div class="font-medium text-slate-800">
+                              {{ member.nombreCompleto }}
+                            </div>
+                            <div class="text-xs text-slate-400">{{ member.email }}</div>
+                          </div>
+                        </div>
+                      </ng-template>
+                    </p-autoComplete>
                   </div>
                   <div class="flex flex-col gap-2">
                     <label class="font-semibold text-slate-700">Estado Actual *</label>
@@ -618,6 +691,7 @@
                       label="Enviar"
                       icon="pi pi-send"
                       size="small"
+                      [loading]="isCommenting"
                       (onClick)="agregarComentario()"
                       [disabled]="!ticketForm.get('nuevoComentario')?.value?.trim()"
                     ></p-button>
@@ -678,6 +752,8 @@
           *ngIf="canEditTicket"
           label="Guardar Ticket"
           icon="pi pi-save"
+          [loading]="isSaving"
+          [disabled]="ticketForm.invalid || ticketForm.pristine"
           (onClick)="guardarTicket()"
         ></p-button>
       </div>
@@ -727,7 +803,8 @@
       <p-button
         label="Guardar Permisos"
         icon="pi pi-check"
-        (onClick)="guardarPermisosLocales()"
+        [loading]="isSaving"
+        (onClick)="saveLocalPermissions()"
       ></p-button>
     </ng-template>
   </p-dialog>

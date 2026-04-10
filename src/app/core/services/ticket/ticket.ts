@@ -32,4 +32,38 @@ export class TicketService {
 
     return this.http.get<ApiResponse<any>>(`${this.apiUrl}/api/tickets`, { params });
   }
+
+  // ----- Crear Ticket -----
+  createTicket(ticketData: any): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl}/api/tickets`, ticketData);
+  }
+
+  // ----- Editar Ticket -----
+  updateTicket(ticketId: string, ticketData: any): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/api/tickets/${ticketId}`, ticketData);
+  }
+
+  // ----- Eliminar un Ticket -----
+  deleteTicket(ticketId: string): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.apiUrl}/api/tickets/${ticketId}`);
+  }
+
+  // ----- Agregar Comentario a un Ticket -----
+  addTicketComment(ticketId: string, texto: string): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl}/api/tickets/${ticketId}/comments`, {
+      texto,
+    });
+  }
+
+  // ----- Obtener un Ticket por ID (Detalle completo) -----
+  getTicketById(ticketId: string): Observable<ApiResponse<any>> {
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/api/tickets/${ticketId}`);
+  }
+
+  // ----- Actualizar solo el estado del Ticket (Kanban Drag & Drop) -----
+  updateTicketStatus(ticketId: string, estado: string): Observable<ApiResponse<any>> {
+    return this.http.patch<ApiResponse<any>>(`${this.apiUrl}/api/tickets/${ticketId}/status`, {
+      estado,
+    });
+  }
 }

@@ -58,8 +58,21 @@ export class GroupService {
 
   // Gestión de Grupo
   // ----- Obtener Miembros -----
-  getGroupMembers(groupId: string): Observable<ApiResponse<any>> {
-    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/api/groups/${groupId}/members`);
+  getGroupMembers(
+    groupId: string,
+    page: number = 1,
+    limit: number = 5,
+    search?: string,
+  ): Observable<ApiResponse<any>> {
+    let params = new HttpParams().set('page', page).set('limit', limit);
+
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/api/groups/${groupId}/members`, {
+      params,
+    });
   }
 
   // ----- Agregar Miembro -----
