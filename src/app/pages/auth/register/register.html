@@ -17,10 +17,10 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         <div class="flex flex-col gap-2">
-          <label for="usuario" class="text-sm font-semibold text-slate-700">Usuario</label>
-          <input pInputText id="usuario" formControlName="usuario" placeholder="Ej. jperez" class="w-full" />
-          @if (f['usuario'].invalid && (f['usuario'].dirty || f['usuario'].touched)) {
-            <small class="text-red-500">El usuario es obligatorio (mín. 4 caracteres).</small>
+          <label for="nombreCompleto" class="text-sm font-semibold text-slate-700">Nombre Completo</label>
+          <input pInputText id="nombreCompleto" formControlName="nombreCompleto" placeholder="Juan Pérez" class="w-full" />
+          @if (f['nombreCompleto'].invalid && (f['nombreCompleto'].dirty || f['nombreCompleto'].touched)) {
+            <small class="text-red-500">El nombre es obligatorio.</small>
           }
         </div>
 
@@ -29,14 +29,6 @@
           <input pInputText id="email" type="email" formControlName="email" placeholder="correo@empresa.com" class="w-full" />
           @if (f['email'].invalid && (f['email'].dirty || f['email'].touched)) {
             <small class="text-red-500">Ingresa un correo válido.</small>
-          }
-        </div>
-
-        <div class="flex flex-col gap-2 md:col-span-2">
-          <label for="nombreCompleto" class="text-sm font-semibold text-slate-700">Nombre Completo</label>
-          <input pInputText id="nombreCompleto" formControlName="nombreCompleto" placeholder="Juan Pérez" class="w-full" />
-          @if (f['nombreCompleto'].invalid && (f['nombreCompleto'].dirty || f['nombreCompleto'].touched)) {
-            <small class="text-red-500">El nombre es obligatorio.</small>
           }
         </div>
 

@@ -65,7 +65,6 @@ export class Register {
   // Definición del formulario
   registerForm: FormGroup = this.fb.group(
     {
-      usuario: ['', [Validators.required, Validators.minLength(4)]],
       email: ['', [Validators.required, Validators.email]],
       nombreCompleto: ['', [Validators.required, Validators.minLength(5)]],
       direccion: ['', [Validators.required]],
